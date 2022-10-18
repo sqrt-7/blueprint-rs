@@ -15,9 +15,19 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+
     - name: checkout repository
       uses: actions/checkout@v3
     
+    - name: check formatting
+      run: make check-format
+
+    - name: lint
+      run: make check-lint
+
+    - name: audit
+      run: make check-audit
+
     - name: build
       run: make build
 
