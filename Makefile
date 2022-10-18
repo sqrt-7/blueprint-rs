@@ -10,3 +10,9 @@ check-format:
 
 check-audit:
 	cargo audit
+
+build:
+	cargo build --verbose
+
+test:
+	cargo test --verbose
