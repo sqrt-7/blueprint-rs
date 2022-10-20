@@ -11,6 +11,8 @@ check-format:
 check-audit:
 	cargo audit
 
+check: check-lint check-format check-audit
+
 build:
 	cargo build --verbose
 

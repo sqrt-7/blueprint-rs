@@ -1,16 +1,13 @@
 use actix_web::{
     http::{Method, StatusCode},
-    web, App, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer,
-    Responder, Route,
+    web, App, HttpRequest, HttpResponse, HttpServer, Responder, Route,
 };
 
 async fn greet(req: HttpRequest) -> impl Responder {
     let name = req.match_info().get("name").unwrap_or("World");
     let greet = format!("Hello {}!", name);
 
-    let resp = HttpResponse::new(StatusCode::OK).set_body(greet);
-
-    resp
+    HttpResponse::new(StatusCode::OK).set_body(greet)
 }
 
 async fn health_check(_: HttpRequest) -> impl Responder {
