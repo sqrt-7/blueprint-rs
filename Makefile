@@ -3,7 +3,7 @@ test-coverage:
 	grcov . --binary-path ./target/debug/deps/ -s . -t html --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o target/coverage/html
 
 check-lint:
-	cargo clippy -- -D warnings
+	cargo clippy -- --no-deps -D warnings
 
 check-format:
 	cargo fmt -- --check
