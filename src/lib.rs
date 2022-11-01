@@ -1,23 +1,36 @@
-use std::io;
+pub mod values;
 
 use actix_web::{
-    dev::Server, web, App, HttpRequest, HttpResponse, HttpServer, Responder,
+    dev::Server, http::Method, web, App, HttpRequest, HttpResponse, HttpServer,
+    Responder, Route,
 };
+use std::{io, net::TcpListener};
 
 async fn health_check(_: HttpRequest) -> impl Responder {
     HttpResponse::Ok()
 }
 
-pub fn run(address: &str) -> Result<Server, io::Error> {
-    let server = HttpServer::new(|| {
+#[derive(serde::Deserialize)]
+struct FormData {
+    email: String,
+    name: String,
+}
+
+async fn subscribe(_form: web::Form<FormData>) -> impl Responder {
+    HttpResponse::Ok()
+}
+
+pub fn run(listener: TcpListener) -> Result<Server, io::Error> {
+    let app_init = || {
         App::new()
-            // // web::get() = Route::new().method(Method::GET)
-            // .route("/", Route::new().method(Method::GET).to(greet))
-            // .route("/{name}", web::get().to(greet))
-            .route("/health-check", web::get().to(health_check))
-    })
-    .bind(address)?
-    .run();
+            .route(
+                values::ROUTES_HEALTHCHECK,
+                Route::new().method(Method::GET).to(health_check),
+            )
+            .route(values::ROUTES_SUBSCRIPTIONS, web::post().to(subscribe))
+    };
+
+    let server = HttpServer::new(app_init).listen(listener)?.run();
 
     Ok(server)
 }

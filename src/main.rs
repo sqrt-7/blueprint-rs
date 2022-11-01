@@ -1,6 +1,10 @@
-use zero2prod::run;
+use std::net::TcpListener;
+use zero2prod::{run, values};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    run("127.0.0.1:0")?.await
+    let listener = TcpListener::bind(values::LOCALHOST_RANDOM)
+        .expect("failed to bind random port");
+
+    run(listener)?.await
 }
