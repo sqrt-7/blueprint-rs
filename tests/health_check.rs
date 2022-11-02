@@ -1,6 +1,13 @@
 use actix_web::http;
-use std::{collections::HashMap, net::TcpListener};
-use zero2prod::values;
+use std::collections::HashMap;
+use zero2prod::{
+    datastore::inmem::InMemDatastore,
+    service::{
+        endpoints::{ROUTES_HEALTHCHECK, ROUTES_SUBSCRIPTIONS},
+        Service,
+    },
+    LOCALHOST, LOCALHOST_RANDOM,
+};
 
 struct TestServer {
     addr: String,
@@ -8,30 +15,27 @@ struct TestServer {
 
 impl TestServer {
     fn new(addr: String) -> Self {
+        println!(">> starting TestServer on {}", addr);
         TestServer { addr }
     }
 }
 
 fn spawn_app() -> TestServer {
-    let listener = TcpListener::bind(values::LOCALHOST_RANDOM)
-        .expect("failed to bind random port");
+    let ds = InMemDatastore::new();
+    let mut svc = Service::new(ds);
 
-    let port = listener.local_addr().unwrap().port();
-
-    let server = zero2prod::run(listener).unwrap_or_else(|err| {
-        panic!("failed to spawn server: {}", err);
-    });
+    let server = svc.start_http_server(LOCALHOST_RANDOM).unwrap();
 
     tokio::spawn(server);
 
-    TestServer::new(format!("http://{}:{}", values::LOCALHOST, port))
+    TestServer::new(format!("http://{}:{}", LOCALHOST, svc.http_port().unwrap()))
 }
 
 #[tokio::test]
 async fn health_check_success() {
     let srv = spawn_app();
     let client = reqwest::Client::new();
-    let endpoint = format!("{}{}", srv.addr, values::ROUTES_HEALTHCHECK);
+    let endpoint = format!("{}{}", srv.addr, ROUTES_HEALTHCHECK);
 
     let resp = client
         .get(endpoint)
@@ -47,7 +51,7 @@ async fn health_check_success() {
 async fn subscribe_form_valid_returns_200() {
     let srv = spawn_app();
     let client = reqwest::Client::new();
-    let endpoint = format!("{}{}", srv.addr, values::ROUTES_SUBSCRIPTIONS);
+    let endpoint = format!("{}{}", srv.addr, ROUTES_SUBSCRIPTIONS);
 
     let mut form = HashMap::new();
     form.insert("name", "Jeff Jeffries");
@@ -67,7 +71,7 @@ async fn subscribe_form_valid_returns_200() {
 async fn subscribe_form_invalid_returns_400() {
     let srv = spawn_app();
     let client = reqwest::Client::new();
-    let endpoint = format!("{}{}", srv.addr, values::ROUTES_SUBSCRIPTIONS);
+    let endpoint = format!("{}{}", srv.addr, ROUTES_SUBSCRIPTIONS);
 
     let mut form = HashMap::new();
     form.insert("name", "Jeff Jeffries");
