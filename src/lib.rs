@@ -1,5 +1,6 @@
-pub mod datastore;
-pub mod service;
+#![allow(dead_code)]
 
-pub const LOCALHOST: &'static str = "127.0.0.1";
-pub const LOCALHOST_RANDOM: &'static str = "127.0.0.1:0";
+pub mod datastore;
+pub mod http_server;
+pub mod service;
+pub mod settings;

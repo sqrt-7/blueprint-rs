@@ -1,53 +1,67 @@
-pub mod endpoints;
+pub mod domain;
+pub mod error;
 
-use crate::datastore::Datastore;
-use actix_web::{dev::Server, App, HttpServer};
-use std::{error::Error, net::TcpListener};
+use self::error::{ServiceError, ServiceErrorType};
+use crate::{datastore, datastore::Datastore, settings::Settings};
+use std::result;
+use uuid::Uuid;
 
-pub struct Service<DS>
-where
-    DS: Datastore,
-{
-    datastore: DS,
-    http_port: Option<String>,
+pub type Result<T> = result::Result<T, ServiceError>;
+
+pub struct Service {
+    datastore: Box<dyn Datastore>,
+    settings: Settings,
 }
 
-impl<DS> Service<DS>
-where
-    DS: Datastore,
-{
-    // New -------------------------
-
-    pub fn new(datastore: DS) -> Self {
+impl Service {
+    pub fn new(settings: Settings, datastore: impl Datastore) -> Self {
         Service {
-            datastore,
-            http_port: None,
+            datastore: Box::new(datastore),
+            settings,
         }
     }
 
-    pub fn start_http_server(&mut self, addr: &str) -> Result<Server, Box<dyn Error>> {
-        let listener = TcpListener::bind(addr)?;
-        let port = listener.local_addr()?.port();
-        self.http_port = Some(port.to_string());
+    // LOGIC -----------------
 
-        // Register endpoints
-        let app_init = || {
-            let mut app = App::new();
+    pub fn create_subscription(&self, email: String, name: String) -> Result<domain::Subscription> {
+        let uuid = Uuid::new_v4().to_string();
+        let sub = domain::Subscription::new(uuid.clone(), email.clone(), name.clone());
 
-            for (path, route) in endpoints::endpoints() {
-                app = app.route(path.as_str(), route);
-            }
-            app
-        };
+        {
+            let db_sub = datastore::Subscription { uuid, name, email };
 
-        let server = HttpServer::new(app_init).listen(listener)?.run();
+            let result = self.datastore.store_subscription(db_sub);
+            if let Err(e) = result {
+                let err = ServiceError::new("failed to create new subscription")
+                    .with_internal(format!("datastore.store_subscription: {}", e).as_str());
 
-        Ok(server)
+                return Err(err);
+            };
+        }
+
+        Ok(sub)
     }
 
-    // Get & Set -------------------
+    pub fn get_subscription(&self, uuid: String) -> Result<domain::Subscription> {
+        let db_sub = self.datastore.get_subscription(uuid.clone());
 
-    pub fn http_port(&self) -> Option<&String> {
-        self.http_port.as_ref()
+        if let Err(db_err) = db_sub {
+            let err = if db_err.contains("not found") {
+                ServiceError::new("subscription does not exist")
+                    .with_type(ServiceErrorType::NotFound)
+                    .with_internal(format!("uuid: {}", uuid).as_str())
+            } else {
+                ServiceError::new("failed to get subscription")
+                    .with_internal(format!("datastore.get_subscription: {}", db_err).as_str())
+            };
+
+            return Err(err);
+        };
+
+        let db_sub = db_sub.unwrap();
+
+        let sub = domain::Subscription::new(db_sub.uuid, db_sub.email, db_sub.name);
+
+        Ok(sub)
     }
 }

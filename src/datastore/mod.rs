@@ -1,12 +1,12 @@
 pub mod inmem;
 
-pub trait Datastore {
-    fn store_subscription(&mut self, sub: Subscription) -> Result<(), String>;
-    fn get_subscription(&self, uuid: String) -> Result<&Subscription, String>;
+pub trait Datastore: Send + Sync + 'static {
+    fn store_subscription(&self, sub: Subscription) -> Result<(), String>;
+    fn get_subscription(&self, uuid: String) -> Result<Subscription, String>;
 }
-
+#[derive(Clone)]
 pub struct Subscription {
-    uuid: String,
-    name: String,
-    email: String,
+    pub uuid: String,
+    pub name: String,
+    pub email: String,
 }
