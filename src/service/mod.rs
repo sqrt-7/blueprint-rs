@@ -9,12 +9,12 @@ use uuid::Uuid;
 pub type Result<T> = result::Result<T, ServiceError>;
 
 pub struct Service {
-    datastore: Box<dyn Datastore>,
+    datastore: Box<dyn Datastore + 'static>,
     settings: Settings,
 }
 
 impl Service {
-    pub fn new(settings: Settings, datastore: impl Datastore) -> Self {
+    pub fn new(settings: Settings, datastore: impl Datastore + 'static) -> Self {
         Service {
             datastore: Box::new(datastore),
             settings,

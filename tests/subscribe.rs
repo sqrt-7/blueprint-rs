@@ -19,10 +19,8 @@ async fn post_subscription_201_and_get_200() {
     req.insert("name", name);
     req.insert("email", email);
 
-    let sub: Subscription;
-
     // Create subscription
-    {
+    let created_sub: Subscription = {
         let endpoint = format!("{}/subscriptions", srv.basepath);
 
         let resp = client
@@ -33,18 +31,18 @@ async fn post_subscription_201_and_get_200() {
             .expect("failed to execute request");
 
         let status_code = resp.status();
-        let text = resp.text().await.expect("failed to get payload");
-
         assert_eq!(http::StatusCode::CREATED, status_code);
 
-        sub = serde_json::from_str(&text).unwrap();
-    }
+        let text = resp.text().await.expect("failed to get payload");
 
-    println!(">> created Subscription with uuid {}", &sub.uuid());
+        serde_json::from_str(&text).expect("failed to parse json payload")
+    };
+
+    println!(">> created Subscription with uuid {}", &created_sub.uuid());
 
     // Get subscription
-    {
-        let endpoint = format!("{}/subscriptions/{}", srv.basepath, &sub.uuid());
+    let get_sub: Subscription = {
+        let endpoint = format!("{}/subscriptions/{}", srv.basepath, &created_sub.uuid());
 
         let resp = client
             .get(endpoint)
@@ -55,15 +53,14 @@ async fn post_subscription_201_and_get_200() {
         let status_code = resp.status();
         assert_eq!(http::StatusCode::OK, status_code);
 
-        let get_sub = resp
-            .json::<Subscription>()
+        resp.json::<Subscription>()
             .await
-            .expect("failed to parse json payload");
+            .expect("failed to parse json payload")
+    };
 
-        assert_eq!(sub.uuid(), get_sub.uuid());
-        assert_eq!(email, get_sub.email());
-        assert_eq!(name, get_sub.name());
-    }
+    assert_eq!(created_sub.uuid(), get_sub.uuid());
+    assert_eq!(email, get_sub.email());
+    assert_eq!(name, get_sub.name());
 }
 
 #[tokio::test]
@@ -86,11 +83,17 @@ async fn post_subscription_400() {
         .expect("failed to execute request");
 
     let status_code = resp.status();
+    assert_eq!(http::StatusCode::BAD_REQUEST, status_code);
 
-    let text = resp.text().await.expect("failed to get payload");
-    println!("text: {}", text);
+    let err = resp
+        .json::<ServiceError>()
+        .await
+        .expect("failed to get payload");
 
     assert_eq!(http::StatusCode::BAD_REQUEST, status_code);
+    assert!(matches!(err.error_type(), ServiceErrorType::Validation));
+
+    println!("error: {}", err);
 }
 
 #[tokio::test]

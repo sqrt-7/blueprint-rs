@@ -1,6 +1,6 @@
 pub mod inmem;
 
-pub trait Datastore: Send + Sync + 'static {
+pub trait Datastore: Send + Sync {
     fn store_subscription(&self, sub: Subscription) -> Result<(), String>;
     fn get_subscription(&self, uuid: String) -> Result<Subscription, String>;
 }

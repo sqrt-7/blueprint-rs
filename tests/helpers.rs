@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use zero2prod::{
     datastore::inmem::InMemDatastore, http_server, service::Service, settings::Settings,
 };
@@ -15,16 +17,16 @@ impl TestServer {
 pub fn spawn_app() -> TestServer {
     let settings = Settings::new(0);
 
-    let listener =
-        http_server::create_listener(settings.get_http_addr().as_str()).unwrap_or_else(|err| {
-            panic!("unable to bind listener: {}", err);
-        });
+    let listener = http_server::create_listener(settings.get_http_addr()).unwrap_or_else(|err| {
+        panic!("unable to bind listener: {}", err);
+    });
     let actual_http_port = listener.local_addr().unwrap().port();
 
     let ds = InMemDatastore::new();
     let svc = Service::new(settings, ds);
+    let svc_arc = Arc::new(svc);
 
-    let http_server = http_server::start_http_server(listener, svc).unwrap_or_else(|err| {
+    let http_server = http_server::start_http_server(listener, svc_arc).unwrap_or_else(|err| {
         panic!("Failed to start http server: {}", err);
     });
 
