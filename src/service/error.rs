@@ -44,12 +44,12 @@ impl ServiceError {
         self.error_type.clone()
     }
 
-    pub fn msg(&self) -> &str {
-        self.msg.as_ref()
+    pub fn msg(&self) -> String {
+        self.msg.clone()
     }
 
-    pub fn internal_msg(&self) -> &str {
-        self.internal_msg.as_ref()
+    pub fn internal_msg(&self) -> String {
+        self.internal_msg.clone()
     }
 }
 

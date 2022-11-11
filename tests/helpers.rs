@@ -1,5 +1,6 @@
-use std::sync::Arc;
+use std::sync;
 
+use env_logger::Env;
 use zero2prod::{
     datastore::inmem::InMemDatastore, http_server, service::Service, settings::Settings,
 };
@@ -14,20 +15,27 @@ impl TestServer {
     }
 }
 
+static LOG_INIT: sync::Once = sync::Once::new();
+
 pub fn spawn_app() -> TestServer {
     let settings = Settings::new(0);
 
-    let listener = http_server::create_listener(settings.get_http_addr()).unwrap_or_else(|err| {
-        panic!("unable to bind listener: {}", err);
+    LOG_INIT.call_once(|| {
+        let _ = env_logger::Builder::from_env(Env::default().default_filter_or("debug")).try_init();
     });
+
+    let listener = // random port
+        http_server::create_listener(String::from("127.0.0.1:0")).unwrap_or_else(|err| {
+            panic!("unable to bind listener: {}", err);
+        });
+
     let actual_http_port = listener.local_addr().unwrap().port();
 
     let ds = InMemDatastore::new();
-    let svc = Service::new(settings, ds);
-    let svc_arc = Arc::new(svc);
+    let svc = Service::new_arc(settings, ds);
 
-    let http_server = http_server::start_http_server(listener, svc_arc).unwrap_or_else(|err| {
-        panic!("Failed to start http server: {}", err);
+    let http_server = http_server::start_http_server(listener, svc).unwrap_or_else(|err| {
+        panic!("failed to start http server: {}", err);
     });
 
     let basepath = format!("http://127.0.0.1:{}", actual_http_port);

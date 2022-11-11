@@ -38,8 +38,6 @@ async fn post_subscription_201_and_get_200() {
         serde_json::from_str(&text).expect("failed to parse json payload")
     };
 
-    println!(">> created Subscription with uuid {}", &created_sub.uuid());
-
     // Get subscription
     let get_sub: Subscription = {
         let endpoint = format!("{}/subscriptions/{}", srv.basepath, &created_sub.uuid());

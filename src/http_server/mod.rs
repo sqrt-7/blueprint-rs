@@ -1,7 +1,7 @@
 pub mod routes;
 
 use crate::service::Service;
-use actix_web::{dev::Server, web, App, HttpServer};
+use actix_web::{dev::Server, middleware::Logger, web, App, HttpServer};
 use std::{error::Error, net::TcpListener, sync::Arc};
 
 pub fn create_listener(addr: String) -> Result<TcpListener, Box<dyn Error>> {
@@ -13,17 +13,17 @@ pub fn start_http_server(
     listener: TcpListener,
     svc: Arc<Service>,
 ) -> Result<Server, Box<dyn Error>> {
-    let ss = web::Data::new(svc);
+    let svc_holder = web::Data::from(svc);
 
-    // Register endpoints
     let app_init = move || {
-        let mut app = App::new();
+        let mut app = App::new()
+            .app_data(svc_holder.clone())
+            .wrap(Logger::default());
 
+        // Register endpoints
         for (path, route) in routes::endpoints() {
             app = app.route(path.as_str(), route);
         }
-
-        app = app.app_data(ss.clone());
 
         app
     };

@@ -2,8 +2,12 @@ pub mod domain;
 pub mod error;
 
 use self::error::{ServiceError, ServiceErrorType};
-use crate::{datastore, datastore::Datastore, settings::Settings};
-use std::result;
+use crate::{
+    datastore,
+    datastore::{Datastore, NotFoundError},
+    settings::Settings,
+};
+use std::{result, sync::Arc};
 use uuid::Uuid;
 
 pub type Result<T> = result::Result<T, ServiceError>;
@@ -21,6 +25,13 @@ impl Service {
         }
     }
 
+    pub fn new_arc(settings: Settings, datastore: impl Datastore + 'static) -> Arc<Self> {
+        Arc::new(Service {
+            datastore: Box::new(datastore),
+            settings,
+        })
+    }
+
     // LOGIC -----------------
 
     pub fn create_subscription(&self, email: String, name: String) -> Result<domain::Subscription> {
@@ -30,7 +41,7 @@ impl Service {
         {
             let db_sub = datastore::Subscription { uuid, name, email };
 
-            let result = self.datastore.store_subscription(db_sub);
+            let result = self.datastore.store_subscription(&db_sub);
             if let Err(e) = result {
                 let err = ServiceError::new("failed to create new subscription")
                     .with_internal(format!("datastore.store_subscription: {}", e).as_str());
@@ -43,25 +54,24 @@ impl Service {
     }
 
     pub fn get_subscription(&self, uuid: String) -> Result<domain::Subscription> {
-        let db_sub = self.datastore.get_subscription(uuid.clone());
+        match self.datastore.get_subscription(uuid) {
+            Ok(db_sub) => {
+                let sub = domain::Subscription::new(db_sub.uuid, db_sub.email, db_sub.name);
+                Ok(sub)
+            }
 
-        if let Err(db_err) = db_sub {
-            let err = if db_err.contains("not found") {
-                ServiceError::new("subscription does not exist")
-                    .with_type(ServiceErrorType::NotFound)
-                    .with_internal(format!("uuid: {}", uuid).as_str())
-            } else {
-                ServiceError::new("failed to get subscription")
-                    .with_internal(format!("datastore.get_subscription: {}", db_err).as_str())
-            };
+            Err(db_err) => {
+                // Not found
+                if let Some(not_found_err) = db_err.downcast_ref::<NotFoundError>() {
+                    return Err(ServiceError::new("subscription does not exist")
+                        .with_type(ServiceErrorType::NotFound)
+                        .with_internal(not_found_err.msg.as_str()));
+                }
 
-            return Err(err);
-        };
-
-        let db_sub = db_sub.unwrap();
-
-        let sub = domain::Subscription::new(db_sub.uuid, db_sub.email, db_sub.name);
-
-        Ok(sub)
+                // All other errors
+                return Err(ServiceError::new("failed to get subscription")
+                    .with_internal(format!("datastore.get_subscription: {}", db_err).as_str()));
+            }
+        }
     }
 }

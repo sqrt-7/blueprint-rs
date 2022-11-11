@@ -1,6 +1,6 @@
 #[derive(serde::Deserialize, Debug)]
 pub struct Settings {
-    http_port: u16,
+    pub http_port: u16,
 }
 
 impl Settings {
@@ -14,9 +14,5 @@ impl Settings {
             .build()?;
 
         loader.try_deserialize::<Settings>()
-    }
-
-    pub fn get_http_addr(&self) -> String {
-        format!("127.0.0.1:{}", self.http_port)
     }
 }
