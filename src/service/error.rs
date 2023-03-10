@@ -5,9 +5,9 @@ use actix_web::{
     HttpResponse, ResponseError,
 };
 
-pub const CODE_SUB_NOT_FOUND: &'static str = "CODE_SUB_NOT_FOUND";
-pub const CODE_SUB_CREATE_FAIL: &'static str = "CODE_SUB_CREATE_FAIL";
-pub const CODE_UNEXPECTED: &'static str = "CODE_UNEXPECTED";
+pub const CODE_SUB_NOT_FOUND: &str = "CODE_SUB_NOT_FOUND";
+pub const CODE_SUB_CREATE_FAIL: &str = "CODE_SUB_CREATE_FAIL";
+pub const CODE_UNEXPECTED: &str = "CODE_UNEXPECTED";
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct ServiceError {

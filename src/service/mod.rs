@@ -33,7 +33,7 @@ impl Service {
 
     pub fn create_subscription(&self, email: String, name: String) -> Result<domain::Subscription> {
         let uuid = Uuid::new_v4().to_string();
-        let sub = domain::Subscription::new(uuid.clone(), email.clone(), name.clone());
+        let sub = domain::Subscription::new(uuid, email, name);
 
         let result = self.datastore.store_subscription(&sub);
         if let Err(e) = result {

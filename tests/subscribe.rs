@@ -2,9 +2,9 @@ mod helpers;
 
 use actix_web::http;
 use std::collections::HashMap;
-use zero2prod::service::{
+use zero2prod::{
     domain::Subscription,
-    error::{ServiceError, ServiceErrorType},
+    service::error::{ServiceError, ServiceErrorType},
 };
 
 #[tokio::test]

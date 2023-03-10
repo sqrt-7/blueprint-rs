@@ -41,7 +41,7 @@ impl Datastore for InMemDatastore {
             )));
         }
 
-        ds.unwrap().insert(item.uuid.to_owned(), data);
+        ds.unwrap().insert(item.uuid, data);
 
         Ok(())
     }
