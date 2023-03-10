@@ -1,8 +1,11 @@
 use std::{collections::HashMap, error::Error, sync::Mutex};
 
-use crate::datastore::{InternalError, NotFoundError};
+use crate::{
+    datastore::{InternalError, NotFoundError},
+    domain,
+};
 
-use super::{Datastore, Subscription};
+use super::{DBSubscription, Datastore};
 
 pub struct InMemDatastore {
     items: Mutex<HashMap<String, String>>, // <uuid, json>
@@ -23,8 +26,11 @@ impl Default for InMemDatastore {
 }
 
 impl Datastore for InMemDatastore {
-    fn store_subscription(&self, sub: &Subscription) -> Result<(), Box<dyn Error>> {
+    fn store_subscription(&self, sub: &domain::Subscription) -> Result<(), Box<dyn Error>> {
         tracing::info!("[InMemDatastore::store_subscription]");
+
+        let item = DBSubscription::from_domain(sub);
+        let data = serde_json::to_string(&item)?;
 
         let ds = self.items.lock();
 
@@ -35,13 +41,12 @@ impl Datastore for InMemDatastore {
             )));
         }
 
-        let json = serde_json::to_string(sub)?;
-        ds.unwrap().insert(sub.uuid.clone(), json);
+        ds.unwrap().insert(item.uuid.to_owned(), data);
 
         Ok(())
     }
 
-    fn get_subscription(&self, uuid: String) -> Result<Subscription, Box<dyn Error>> {
+    fn get_subscription(&self, uuid: String) -> Result<domain::Subscription, Box<dyn Error>> {
         let svc_span = tracing::info_span!("[InMemDatastore::get_subscription]");
         let _svc_span_guard = svc_span.enter();
 
@@ -55,8 +60,9 @@ impl Datastore for InMemDatastore {
         }
 
         match ds.unwrap().get(&uuid) {
-            Some(json) => {
-                let sub = serde_json::from_str::<Subscription>(json)?;
+            Some(data) => {
+                let item = serde_json::from_str::<DBSubscription>(data)?;
+                let sub = item.to_domain();
                 Ok(sub)
             }
 

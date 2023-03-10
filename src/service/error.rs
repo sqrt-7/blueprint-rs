@@ -5,10 +5,14 @@ use actix_web::{
     HttpResponse, ResponseError,
 };
 
+pub const CODE_SUB_NOT_FOUND: &'static str = "CODE_SUB_NOT_FOUND";
+pub const CODE_SUB_CREATE_FAIL: &'static str = "CODE_SUB_CREATE_FAIL";
+pub const CODE_UNEXPECTED: &'static str = "CODE_UNEXPECTED";
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct ServiceError {
     error_type: ServiceErrorType,
-    msg: String,
+    code: String,
 
     #[serde(skip_serializing, skip_deserializing)]
     internal_msg: String,
@@ -25,7 +29,7 @@ impl ServiceError {
     pub fn new(msg: &str) -> Self {
         ServiceError {
             error_type: ServiceErrorType::Internal,
-            msg: msg.to_string(),
+            code: msg.to_string(),
             internal_msg: String::new(),
         }
     }
@@ -45,7 +49,7 @@ impl ServiceError {
     }
 
     pub fn msg(&self) -> String {
-        self.msg.clone()
+        self.code.clone()
     }
 
     pub fn internal_msg(&self) -> String {
@@ -73,8 +77,8 @@ impl Debug for ServiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "ServiceError{{ type: {}, msg: {}, internal_msg: {} }}",
-            self.error_type, self.msg, self.internal_msg
+            "ServiceError{{ type: {}, code: {}, internal_msg: {} }}",
+            self.error_type, self.code, self.internal_msg
         )
     }
 }
@@ -83,8 +87,8 @@ impl Display for ServiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "ServiceError{{ type: {}, msg: {} }}",
-            self.error_type, self.msg
+            "ServiceError{{ type: {}, code: {} }}",
+            self.error_type, self.code
         )
     }
 }

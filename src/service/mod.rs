@@ -1,12 +1,9 @@
-pub mod domain;
 pub mod error;
 
-use self::error::{ServiceError, ServiceErrorType};
-use crate::{
-    datastore,
-    datastore::{Datastore, NotFoundError},
-    settings::Settings,
+use self::error::{
+    ServiceError, ServiceErrorType, CODE_SUB_CREATE_FAIL, CODE_SUB_NOT_FOUND, CODE_UNEXPECTED,
 };
+use crate::{datastore, datastore::Datastore, domain, settings::Settings};
 use std::{result, sync::Arc};
 use uuid::Uuid;
 
@@ -38,38 +35,34 @@ impl Service {
         let uuid = Uuid::new_v4().to_string();
         let sub = domain::Subscription::new(uuid.clone(), email.clone(), name.clone());
 
-        {
-            let db_sub = datastore::Subscription { uuid, name, email };
+        let result = self.datastore.store_subscription(&sub);
+        if let Err(e) = result {
+            let err = ServiceError::new(CODE_SUB_CREATE_FAIL)
+                .with_internal(format!("datastore.store_subscription: {}", e).as_str());
 
-            let result = self.datastore.store_subscription(&db_sub);
-            if let Err(e) = result {
-                let err = ServiceError::new("failed to create new subscription")
-                    .with_internal(format!("datastore.store_subscription: {}", e).as_str());
-
-                return Err(err);
-            };
-        }
+            return Err(err);
+        };
 
         Ok(sub)
     }
 
     pub fn get_subscription(&self, uuid: String) -> Result<domain::Subscription> {
         match self.datastore.get_subscription(uuid) {
-            Ok(db_sub) => {
-                let sub = domain::Subscription::new(db_sub.uuid, db_sub.email, db_sub.name);
+            Ok(sub) => {
+                // do some validation etc...
                 Ok(sub)
             }
 
             Err(db_err) => {
                 // Not found
-                if let Some(not_found_err) = db_err.downcast_ref::<NotFoundError>() {
-                    return Err(ServiceError::new("subscription does not exist")
+                if let Some(not_found_err) = db_err.downcast_ref::<datastore::NotFoundError>() {
+                    return Err(ServiceError::new(CODE_SUB_NOT_FOUND)
                         .with_type(ServiceErrorType::NotFound)
                         .with_internal(not_found_err.msg.as_str()));
                 }
 
                 // All other errors
-                return Err(ServiceError::new("failed to get subscription")
+                return Err(ServiceError::new(CODE_UNEXPECTED)
                     .with_internal(format!("datastore.get_subscription: {}", db_err).as_str()));
             }
         }

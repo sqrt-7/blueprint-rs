@@ -1,21 +1,35 @@
 use std::{error::Error, fmt::Display};
 
-use serde::{Deserialize, Serialize};
+use crate::domain;
 
 pub mod inmem;
 
 pub trait Datastore: Send + Sync {
-    fn store_subscription(&self, sub: &Subscription) -> Result<(), Box<dyn Error>>;
-    fn get_subscription(&self, uuid: String) -> Result<Subscription, Box<dyn Error>>;
+    fn store_subscription(&self, sub: &domain::Subscription) -> Result<(), Box<dyn Error>>;
+    fn get_subscription(&self, uuid: String) -> Result<domain::Subscription, Box<dyn Error>>;
 }
 
 // DTOs -------------------
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Subscription {
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct DBSubscription {
     pub uuid: String,
     pub name: String,
     pub email: String,
+}
+
+impl DBSubscription {
+    pub fn from_domain(inp: &domain::Subscription) -> DBSubscription {
+        DBSubscription {
+            uuid: inp.uuid().to_owned(),
+            name: inp.name().to_owned(),
+            email: inp.email().to_owned(),
+        }
+    }
+
+    pub fn to_domain(self) -> domain::Subscription {
+        domain::Subscription::new(self.uuid, self.email, self.name)
+    }
 }
 
 // ERRORS -----------------
