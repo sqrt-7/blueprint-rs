@@ -1,7 +1,7 @@
 use std::sync;
 
 use env_logger::Env;
-use zero2prod::{datastore::inmem::InMemDatastore, http_server, service::Service};
+use zero2prod::{datastore::inmem::InMemDatastore, logic::Service, server};
 
 pub struct TestServer {
     pub basepath: String,
@@ -21,7 +21,7 @@ pub fn spawn_app() -> TestServer {
     });
 
     let listener = // random port
-        http_server::create_listener(String::from("127.0.0.1:0")).unwrap_or_else(|err| {
+        server::create_listener(String::from("127.0.0.1:0")).unwrap_or_else(|err| {
             panic!("unable to bind listener: {}", err);
         });
 
@@ -30,7 +30,7 @@ pub fn spawn_app() -> TestServer {
     let ds = InMemDatastore::new();
     let svc = Service::new_arc(ds);
 
-    let http_server = http_server::start_http_server(listener, svc).unwrap_or_else(|err| {
+    let http_server = server::start_http_server(listener, svc).unwrap_or_else(|err| {
         panic!("failed to start http server: {}", err);
     });
 

@@ -1,11 +1,14 @@
 use std::{
     collections::HashMap,
+    result,
     sync::{Mutex, MutexGuard},
 };
 
 use crate::domain;
 
 use super::{Datastore, DatastoreError, DatastoreErrorType};
+
+type Result<T> = result::Result<T, DatastoreError>;
 
 pub struct InMemDatastore {
     items: Mutex<HashMap<String, String>>, // <uuid, json>
@@ -18,7 +21,7 @@ impl InMemDatastore {
         }
     }
 
-    fn to_json<T>(item: T) -> Result<String, DatastoreError>
+    fn to_json<T>(item: T) -> Result<String>
     where
         T: serde::Serialize,
     {
@@ -31,7 +34,7 @@ impl InMemDatastore {
         }
     }
 
-    fn from_json<'a, T>(js: &'a str) -> Result<T, DatastoreError>
+    fn from_json<'a, T>(js: &'a str) -> Result<T>
     where
         T: serde::Deserialize<'a>,
     {
@@ -44,7 +47,7 @@ impl InMemDatastore {
         }
     }
 
-    fn lock(&self) -> Result<MutexGuard<HashMap<String, String>>, DatastoreError> {
+    fn lock(&self) -> Result<MutexGuard<HashMap<String, String>>> {
         match self.items.lock() {
             Ok(v) => Ok(v),
             Err(e) => Err(DatastoreError::new(
@@ -62,7 +65,7 @@ impl Default for InMemDatastore {
 }
 
 impl Datastore for InMemDatastore {
-    fn store_subscription(&self, sub: &domain::Subscription) -> Result<(), DatastoreError> {
+    fn store_subscription(&self, sub: &domain::Subscription) -> Result<()> {
         let item = DBSubscription::from_domain(sub);
         let data = InMemDatastore::to_json(&item)?;
 
@@ -71,7 +74,7 @@ impl Datastore for InMemDatastore {
         Ok(())
     }
 
-    fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription, DatastoreError> {
+    fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription> {
         match self.lock()?.get(uuid) {
             Some(data) => {
                 let item = InMemDatastore::from_json::<DBSubscription>(data)?;

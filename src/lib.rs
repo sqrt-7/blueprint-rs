@@ -2,8 +2,8 @@
 
 pub mod datastore;
 pub mod domain;
-pub mod http_server;
-pub mod service;
+pub mod logic;
+pub mod server;
 pub mod settings;
 
 // new_error_code!(FOO) =>

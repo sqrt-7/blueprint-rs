@@ -1,4 +1,4 @@
-use crate::service::{
+use crate::logic::{
     error::{ServiceError, ServiceErrorType, CODE_SUB_INVALID_DATA},
     Service,
 };

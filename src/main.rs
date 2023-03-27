@@ -1,8 +1,8 @@
 use env_logger::Env;
 use zero2prod::{
     datastore::inmem::InMemDatastore,
-    http_server::{create_listener, start_http_server},
-    service::Service,
+    logic::Service,
+    server::{create_listener, start_http_server},
     settings::Config,
 };
 

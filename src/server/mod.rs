@@ -1,6 +1,6 @@
-pub mod routes;
+pub mod http_routes;
 
-use crate::service::Service;
+use crate::logic::Service;
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpServer};
 use std::{error::Error, net::TcpListener, sync::Arc};
 
@@ -21,7 +21,7 @@ pub fn start_http_server(
             .wrap(Logger::default());
 
         // Register endpoints
-        for (path, route) in routes::endpoints() {
+        for (path, route) in http_routes::endpoints() {
             app = app.route(path.as_str(), route);
         }
 

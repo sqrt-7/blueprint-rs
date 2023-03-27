@@ -4,7 +4,7 @@ use actix_web::http;
 use std::collections::HashMap;
 use zero2prod::{
     domain::Subscription,
-    service::error::{ServiceError, ServiceErrorType},
+    logic::error::{ServiceError, ServiceErrorType},
 };
 
 #[tokio::test]
