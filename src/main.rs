@@ -3,20 +3,20 @@ use zero2prod::{
     datastore::inmem::InMemDatastore,
     http_server::{create_listener, start_http_server},
     service::Service,
-    settings::Settings,
+    settings::Config,
 };
 
 fn main() -> std::io::Result<()> {
-    let settings = Settings::new_from_file("settings.yaml")
+    let config = Config::new_from_file("config.yaml")
         .unwrap_or_else(|err| panic!("failed to load settings: {}", err));
 
-    let http_address = format!("127.0.0.1:{}", settings.http_port);
+    let http_address = format!("127.0.0.1:{}", config.http_port);
 
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     let datastore = InMemDatastore::new();
 
-    let svc = Service::new_arc(settings, datastore);
+    let svc = Service::new_arc(datastore);
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()

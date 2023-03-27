@@ -1,9 +1,11 @@
 pub mod error;
 
-use self::error::{
-    ServiceError, ServiceErrorType, CODE_SUB_CREATE_FAIL, CODE_SUB_NOT_FOUND, CODE_UNEXPECTED,
+use self::error::*;
+
+use crate::{
+    datastore::{Datastore, DatastoreErrorType},
+    domain,
 };
-use crate::{datastore, datastore::Datastore, domain, settings::Settings};
 use std::{result, sync::Arc};
 use uuid::Uuid;
 
@@ -11,21 +13,18 @@ pub type Result<T> = result::Result<T, ServiceError>;
 
 pub struct Service {
     datastore: Box<dyn Datastore + 'static>,
-    settings: Settings,
 }
 
 impl Service {
-    pub fn new(settings: Settings, datastore: impl Datastore + 'static) -> Self {
+    pub fn new(datastore: impl Datastore + 'static) -> Self {
         Service {
             datastore: Box::new(datastore),
-            settings,
         }
     }
 
-    pub fn new_arc(settings: Settings, datastore: impl Datastore + 'static) -> Arc<Self> {
+    pub fn new_arc(datastore: impl Datastore + 'static) -> Arc<Self> {
         Arc::new(Service {
             datastore: Box::new(datastore),
-            settings,
         })
     }
 
@@ -36,9 +35,11 @@ impl Service {
         let sub = domain::Subscription::new(uuid, email, name);
 
         let result = self.datastore.store_subscription(&sub);
-        if let Err(e) = result {
-            let err = ServiceError::new(CODE_SUB_CREATE_FAIL)
-                .with_internal(format!("datastore.store_subscription: {}", e).as_str());
+
+        if let Err(db_err) = result {
+            let err = ServiceError::new(CODE_DB_ERROR)
+                .with_type(ServiceErrorType::Internal)
+                .with_internal(format!("datastore.store_subscription: {}", db_err));
 
             return Err(err);
         };
@@ -46,25 +47,22 @@ impl Service {
         Ok(sub)
     }
 
-    pub fn get_subscription(&self, uuid: String) -> Result<domain::Subscription> {
+    pub fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription> {
         match self.datastore.get_subscription(uuid) {
             Ok(sub) => {
-                // do some validation etc...
+                // do some stuff idk
                 Ok(sub)
             }
 
-            Err(db_err) => {
-                // Not found
-                if let Some(not_found_err) = db_err.downcast_ref::<datastore::NotFoundError>() {
-                    return Err(ServiceError::new(CODE_SUB_NOT_FOUND)
-                        .with_type(ServiceErrorType::NotFound)
-                        .with_internal(not_found_err.msg.as_str()));
-                }
+            Err(db_err) => match db_err.error_type {
+                DatastoreErrorType::NotFound => Err(ServiceError::new(CODE_SUB_NOT_FOUND)
+                    .with_type(ServiceErrorType::NotFound)
+                    .with_internal(db_err.msg.to_owned())),
 
-                // All other errors
-                return Err(ServiceError::new(CODE_UNEXPECTED)
-                    .with_internal(format!("datastore.get_subscription: {}", db_err).as_str()));
-            }
+                _ => Err(ServiceError::new(CODE_DB_ERROR)
+                    .with_type(ServiceErrorType::Internal)
+                    .with_internal(format!("datastore.get_subscription: {}", db_err))),
+            },
         }
     }
 }

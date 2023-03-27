@@ -28,8 +28,7 @@ pub fn start_http_server(
         app
     };
 
-    let listen = HttpServer::new(app_init).listen(listener)?;
-    let server = listen.run();
+    let server = HttpServer::new(app_init).listen(listener)?.run();
 
     Ok(server)
 }

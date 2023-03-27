@@ -1,11 +1,11 @@
 #[derive(serde::Deserialize, Debug)]
-pub struct Settings {
+pub struct Config {
     pub http_port: u16,
 }
 
-impl Settings {
+impl Config {
     pub fn new(http_port: u16) -> Self {
-        Settings { http_port }
+        Config { http_port }
     }
 
     pub fn new_from_file(filepath: &str) -> Result<Self, config::ConfigError> {
@@ -13,6 +13,6 @@ impl Settings {
             .add_source(config::File::new(filepath, config::FileFormat::Yaml))
             .build()?;
 
-        loader.try_deserialize::<Settings>()
+        loader.try_deserialize::<Config>()
     }
 }

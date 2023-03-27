@@ -4,53 +4,46 @@ use crate::domain;
 
 pub mod inmem;
 
+// INTERFACE --------------
+
 pub trait Datastore: Send + Sync {
-    fn store_subscription(&self, sub: &domain::Subscription) -> Result<(), Box<dyn Error>>;
-    fn get_subscription(&self, uuid: String) -> Result<domain::Subscription, Box<dyn Error>>;
-}
-
-// DTOs -------------------
-
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
-pub struct DBSubscription {
-    pub uuid: String,
-    pub name: String,
-    pub email: String,
-}
-
-impl DBSubscription {
-    pub fn from_domain(inp: &domain::Subscription) -> DBSubscription {
-        DBSubscription {
-            uuid: inp.uuid().to_owned(),
-            name: inp.name().to_owned(),
-            email: inp.email().to_owned(),
-        }
-    }
-
-    pub fn to_domain(self) -> domain::Subscription {
-        domain::Subscription::new(self.uuid, self.email, self.name)
-    }
+    fn store_subscription(&self, sub: &domain::Subscription) -> Result<(), DatastoreError>;
+    fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription, DatastoreError>;
 }
 
 // ERRORS -----------------
 
-pub type NotFoundError = DatastoreError;
-pub type InternalError = DatastoreError;
-
 #[derive(Debug)]
 pub struct DatastoreError {
     pub msg: String,
+    pub error_type: DatastoreErrorType,
+}
+
+#[derive(Debug)]
+pub enum DatastoreErrorType {
+    NotFound,
+    Other,
 }
 
 impl DatastoreError {
-    pub fn new_box(msg: String) -> Box<Self> {
-        Box::new(DatastoreError { msg })
+    pub fn new(msg: String, error_type: DatastoreErrorType) -> Self {
+        DatastoreError { msg, error_type }
     }
 }
 
 impl Display for DatastoreError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "DatastoreError ({})", self.msg)
+        write!(
+            f,
+            "DatastoreError (msg: {}, error_type: {})",
+            self.msg, self.error_type
+        )
+    }
+}
+
+impl Display for DatastoreErrorType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 
