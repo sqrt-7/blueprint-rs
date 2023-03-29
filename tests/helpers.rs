@@ -1,6 +1,6 @@
 use std::sync;
 
-use env_logger::Env;
+use tracing::Level;
 use zero2prod::{datastore::inmem::InMemDatastore, logic::Service, server};
 
 pub struct TestServer {
@@ -17,7 +17,7 @@ static LOG_INIT: sync::Once = sync::Once::new();
 
 pub fn spawn_app() -> TestServer {
     LOG_INIT.call_once(|| {
-        let _ = env_logger::Builder::from_env(Env::default().default_filter_or("info")).try_init();
+        tracing_subscriber::fmt().with_max_level(Level::INFO).init();
     });
 
     let listener = // random port

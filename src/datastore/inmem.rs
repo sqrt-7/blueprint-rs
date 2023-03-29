@@ -56,25 +56,16 @@ impl InMemDatastore {
             )),
         }
     }
-}
 
-impl Default for InMemDatastore {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Datastore for InMemDatastore {
-    fn store_subscription(&self, sub: &domain::Subscription) -> Result<()> {
+    fn inner_store_subscription(&self, sub: &domain::Subscription) -> Result<()> {
         let item = DBSubscription::from_domain(sub);
         let data = InMemDatastore::to_json(&item)?;
 
         self.lock()?.insert(item.uuid, data);
-
         Ok(())
     }
 
-    fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription> {
+    fn inner_get_subscription(&self, uuid: &str) -> Result<domain::Subscription> {
         match self.lock()?.get(uuid) {
             Some(data) => {
                 let item = InMemDatastore::from_json::<DBSubscription>(data)?;
@@ -89,13 +80,41 @@ impl Datastore for InMemDatastore {
     }
 }
 
+impl Default for InMemDatastore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Datastore for InMemDatastore {
+    #[tracing::instrument]
+    fn store_subscription(&self, sub: &domain::Subscription) -> Result<()> {
+        let res = self.inner_store_subscription(sub);
+        tracing::info!("{:?}", res);
+        res
+    }
+
+    #[tracing::instrument]
+    fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription> {
+        let res = self.inner_get_subscription(uuid);
+        tracing::info!("{:?}", res);
+        res
+    }
+}
+
+impl std::fmt::Debug for InMemDatastore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "InMemDatastore",)
+    }
+}
+
 // DTOs -------------------
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct DBSubscription {
-    pub uuid: String,
-    pub name: String,
-    pub email: String,
+    uuid: String,
+    name: String,
+    email: String,
 }
 
 impl DBSubscription {

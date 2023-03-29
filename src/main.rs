@@ -1,18 +1,20 @@
-use env_logger::Env;
+use tracing::Level;
 use zero2prod::{
     datastore::inmem::InMemDatastore,
     logic::Service,
     server::{create_listener, start_http_server},
-    settings::Config,
 };
 
 fn main() -> std::io::Result<()> {
+    tracing_subscriber::fmt()
+        .json()
+        .with_max_level(Level::INFO)
+        .init();
+
     let config = Config::new_from_file("config.yaml")
         .unwrap_or_else(|err| panic!("failed to load settings: {}", err));
 
     let http_address = format!("127.0.0.1:{}", config.http_port);
-
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     let datastore = InMemDatastore::new();
 
@@ -32,4 +34,23 @@ fn main() -> std::io::Result<()> {
     let main_thread = async { http_server.await };
 
     runtime.block_on(main_thread)
+}
+
+#[derive(serde::Deserialize, Debug)]
+pub struct Config {
+    pub http_port: u16,
+}
+
+impl Config {
+    pub fn new(http_port: u16) -> Self {
+        Config { http_port }
+    }
+
+    pub fn new_from_file(filepath: &str) -> Result<Self, config::ConfigError> {
+        let loader = config::Config::builder()
+            .add_source(config::File::new(filepath, config::FileFormat::Yaml))
+            .build()?;
+
+        loader.try_deserialize::<Config>()
+    }
 }

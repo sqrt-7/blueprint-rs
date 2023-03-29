@@ -30,6 +30,7 @@ impl Service {
 
     // LOGIC -----------------
 
+    #[tracing::instrument]
     pub fn create_subscription(&self, email: String, name: String) -> Result<domain::Subscription> {
         let uuid = Uuid::new_v4().to_string();
         let sub = domain::Subscription::new(uuid, email, name);
@@ -40,13 +41,13 @@ impl Service {
             let err = ServiceError::new(CODE_DB_ERROR)
                 .with_type(ServiceErrorType::Internal)
                 .with_internal(format!("datastore.store_subscription: {}", db_err));
-
             return Err(err);
         };
 
         Ok(sub)
     }
 
+    #[tracing::instrument]
     pub fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription> {
         match self.datastore.get_subscription(uuid) {
             Ok(sub) => {
@@ -57,12 +58,18 @@ impl Service {
             Err(db_err) => match db_err.error_type {
                 DatastoreErrorType::NotFound => Err(ServiceError::new(CODE_SUB_NOT_FOUND)
                     .with_type(ServiceErrorType::NotFound)
-                    .with_internal(db_err.msg.to_owned())),
+                    .with_internal(db_err.msg)),
 
                 _ => Err(ServiceError::new(CODE_DB_ERROR)
                     .with_type(ServiceErrorType::Internal)
                     .with_internal(format!("datastore.get_subscription: {}", db_err))),
             },
         }
+    }
+}
+
+impl core::fmt::Debug for Service {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "logic::Service",)
     }
 }
