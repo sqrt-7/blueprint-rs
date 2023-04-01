@@ -2,23 +2,24 @@ use crate::logic::{
     error::{ServiceError, ServiceErrorType, CODE_SUB_INVALID_DATA},
     Service,
 };
-use actix_web::{http::Method, web, HttpRequest, HttpResponse, Responder, Route};
+use actix_web::{
+    http::Method,
+    web::{self, ServiceConfig},
+    HttpRequest, HttpResponse, Responder, Route,
+};
 
-pub(super) fn endpoints() -> Vec<(String, Route)> {
-    vec![
-        (
-            String::from("/healthz"),
-            Route::new().method(Method::GET).to(healthz),
-        ),
-        (
-            String::from("/subscriptions"),
-            Route::new().method(Method::POST).to(post_subscription),
-        ),
-        (
-            String::from("/subscriptions/{uuid}"),
-            Route::new().method(Method::GET).to(get_subscription),
-        ),
-    ]
+pub(super) fn endpoints(cfg: &mut ServiceConfig) {
+    cfg.route("/healthz", Route::new().method(Method::GET).to(healthz));
+
+    cfg.route(
+        "/subscriptions",
+        Route::new().method(Method::POST).to(post_subscription),
+    );
+
+    cfg.route(
+        "/subscriptions/{uuid}",
+        Route::new().method(Method::GET).to(get_subscription),
+    );
 }
 
 pub(super) async fn healthz(_: HttpRequest) -> impl Responder {

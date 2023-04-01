@@ -1,11 +1,10 @@
+pub mod domain;
 pub mod error;
+pub mod validation;
 
 use self::error::*;
 
-use crate::{
-    datastore::{Datastore, DatastoreErrorType},
-    domain,
-};
+use crate::datastore::{Datastore, DatastoreErrorType};
 use std::{result, sync::Arc};
 use uuid::Uuid;
 
@@ -30,7 +29,7 @@ impl Service {
 
     // LOGIC -----------------
 
-    #[tracing::instrument]
+    //#[tracing::instrument(ret)]
     pub fn create_subscription(&self, email: String, name: String) -> Result<domain::Subscription> {
         let uuid = Uuid::new_v4().to_string();
         let sub = domain::Subscription::new(uuid, email, name);
@@ -47,7 +46,7 @@ impl Service {
         Ok(sub)
     }
 
-    #[tracing::instrument]
+    //#[tracing::instrument]
     pub fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription> {
         match self.datastore.get_subscription(uuid) {
             Ok(sub) => {

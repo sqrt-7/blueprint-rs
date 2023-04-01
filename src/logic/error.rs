@@ -54,6 +54,10 @@ impl ServiceError {
     pub fn code(&self) -> &String {
         &self.code
     }
+
+    pub fn internal_msg(&self) -> &Option<String> {
+        &self.internal_msg
+    }
 }
 
 impl ResponseError for ServiceError {

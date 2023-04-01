@@ -1,6 +1,6 @@
 use std::{error::Error, fmt::Display};
 
-use crate::domain;
+use crate::logic::domain;
 
 pub mod inmem;
 

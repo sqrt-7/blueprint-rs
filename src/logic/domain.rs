@@ -1,3 +1,7 @@
+use crate::logic::error::ServiceError;
+
+use super::validation::Validation;
+
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Subscription {
     uuid: String,
@@ -24,5 +28,11 @@ impl Subscription {
 
     pub fn name(&self) -> &str {
         self.name.as_ref()
+    }
+}
+
+impl Validation for Subscription {
+    fn validate(&self) -> ServiceError {
+        todo!()
     }
 }

@@ -1,10 +1,10 @@
+use crate::logic::domain;
+use opentelemetry::Key;
 use std::{
     collections::HashMap,
     result,
     sync::{Mutex, MutexGuard},
 };
-
-use crate::domain;
 
 use super::{Datastore, DatastoreError, DatastoreErrorType};
 
@@ -56,28 +56,6 @@ impl InMemDatastore {
             )),
         }
     }
-
-    fn inner_store_subscription(&self, sub: &domain::Subscription) -> Result<()> {
-        let item = DBSubscription::from_domain(sub);
-        let data = InMemDatastore::to_json(&item)?;
-
-        self.lock()?.insert(item.uuid, data);
-        Ok(())
-    }
-
-    fn inner_get_subscription(&self, uuid: &str) -> Result<domain::Subscription> {
-        match self.lock()?.get(uuid) {
-            Some(data) => {
-                let item = InMemDatastore::from_json::<DBSubscription>(data)?;
-                Ok(item.to_domain())
-            }
-
-            None => Err(DatastoreError::new(
-                format!("uuid: {}", uuid),
-                DatastoreErrorType::NotFound,
-            )),
-        }
-    }
 }
 
 impl Default for InMemDatastore {
@@ -87,18 +65,47 @@ impl Default for InMemDatastore {
 }
 
 impl Datastore for InMemDatastore {
-    #[tracing::instrument]
     fn store_subscription(&self, sub: &domain::Subscription) -> Result<()> {
-        let res = self.inner_store_subscription(sub);
-        tracing::info!("{:?}", res);
-        res
+        let result = {
+            let item = DBSubscription::from_domain(sub);
+            let data = InMemDatastore::to_json(&item)?;
+
+            self.lock()?.insert(item.uuid, data);
+            Ok(())
+        };
+
+        crate::custom_log(
+            log::Level::Info,
+            "InMemDatastore",
+            "store_subscription",
+            vec![Key::new("result").string(format!("{:?}", result))],
+        );
+
+        result
     }
 
-    #[tracing::instrument]
     fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription> {
-        let res = self.inner_get_subscription(uuid);
-        tracing::info!("{:?}", res);
-        res
+        let result = {
+            match self.lock()?.get(uuid) {
+                Some(data) => {
+                    let item = InMemDatastore::from_json::<DBSubscription>(data)?;
+                    Ok(item.to_domain())
+                }
+
+                None => Err(DatastoreError::new(
+                    format!("uuid: {}", uuid),
+                    DatastoreErrorType::NotFound,
+                )),
+            }
+        };
+
+        crate::custom_log(
+            log::Level::Info,
+            "InMemDatastore",
+            "get_subscription",
+            vec![Key::new("result").string(format!("{:?}", result))],
+        );
+        result
     }
 }
 

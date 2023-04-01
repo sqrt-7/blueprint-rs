@@ -2,9 +2,9 @@ mod helpers;
 
 use actix_web::http;
 use std::collections::HashMap;
-use zero2prod::{
+use zero2prod::logic::{
     domain::Subscription,
-    logic::error::{ServiceError, ServiceErrorType},
+    error::{ServiceError, ServiceErrorType},
 };
 
 #[tokio::test]
@@ -90,8 +90,6 @@ async fn post_subscription_400() {
 
     assert_eq!(http::StatusCode::BAD_REQUEST, status_code);
     assert!(matches!(err.error_type(), ServiceErrorType::Validation));
-
-    println!("error: {}", err);
 }
 
 #[tokio::test]
@@ -116,6 +114,4 @@ async fn get_subscription_404() {
 
     assert_eq!(http::StatusCode::NOT_FOUND, status_code);
     assert!(matches!(err.error_type(), ServiceErrorType::NotFound));
-
-    println!("error: {}", err);
 }
