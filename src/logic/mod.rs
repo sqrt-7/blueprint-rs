@@ -2,8 +2,7 @@ pub mod domain;
 pub mod error;
 pub mod validation;
 
-use self::error::*;
-
+use self::{error::*, validation::ValidateDomain, validation::Validator};
 use crate::datastore::{Datastore, DatastoreErrorType};
 use std::{result, sync::Arc};
 use uuid::Uuid;
@@ -11,28 +10,24 @@ use uuid::Uuid;
 pub type Result<T> = result::Result<T, ServiceError>;
 
 pub struct Service {
-    datastore: Box<dyn Datastore + 'static>,
+    datastore: Arc<dyn Datastore>,
 }
 
 impl Service {
-    pub fn new(datastore: impl Datastore + 'static) -> Self {
-        Service {
-            datastore: Box::new(datastore),
-        }
+    pub fn new(datastore: Arc<dyn Datastore>) -> Self {
+        Service { datastore }
     }
 
-    pub fn new_arc(datastore: impl Datastore + 'static) -> Arc<Self> {
-        Arc::new(Service {
-            datastore: Box::new(datastore),
-        })
+    fn validator(&self) -> Validator {
+        Validator::new(Arc::clone(&self.datastore))
     }
 
     // LOGIC -----------------
 
-    //#[tracing::instrument(ret)]
     pub fn create_subscription(&self, email: String, name: String) -> Result<domain::Subscription> {
         let uuid = Uuid::new_v4().to_string();
         let sub = domain::Subscription::new(uuid, email, name);
+        self.validator().validate(&sub)?;
 
         let result = self.datastore.store_subscription(&sub);
 
@@ -46,7 +41,6 @@ impl Service {
         Ok(sub)
     }
 
-    //#[tracing::instrument]
     pub fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription> {
         match self.datastore.get_subscription(uuid) {
             Ok(sub) => {

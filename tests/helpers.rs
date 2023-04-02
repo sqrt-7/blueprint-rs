@@ -1,4 +1,4 @@
-use std::sync;
+use std::sync::{self, Arc};
 
 use opentelemetry::sdk::{export::trace::stdout as otel_stdout, trace as otel_trace};
 
@@ -44,8 +44,8 @@ pub fn spawn_app() -> TestServer {
 
     let actual_http_port = listener.local_addr().unwrap().port();
 
-    let ds = InMemDatastore::new();
-    let svc = Service::new_arc(ds);
+    let ds = Arc::new(InMemDatastore::new());
+    let svc = Arc::new(Service::new(ds));
 
     let http_server = http::init_server(listener, svc, tracer).unwrap_or_else(|err| {
         panic!("failed to start http server: {}", err);

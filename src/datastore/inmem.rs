@@ -1,3 +1,4 @@
+use super::{Datastore, DatastoreError, DatastoreErrorType};
 use crate::logic::domain;
 use opentelemetry::Key;
 use std::{
@@ -5,8 +6,6 @@ use std::{
     result,
     sync::{Mutex, MutexGuard},
 };
-
-use super::{Datastore, DatastoreError, DatastoreErrorType};
 
 type Result<T> = result::Result<T, DatastoreError>;
 
@@ -76,7 +75,7 @@ impl Datastore for InMemDatastore {
 
         crate::custom_log(
             log::Level::Info,
-            "InMemDatastore",
+            file!(),
             "store_subscription",
             vec![Key::new("result").string(format!("{:?}", result))],
         );
@@ -101,7 +100,7 @@ impl Datastore for InMemDatastore {
 
         crate::custom_log(
             log::Level::Info,
-            "InMemDatastore",
+            file!(),
             "get_subscription",
             vec![Key::new("result").string(format!("{:?}", result))],
         );

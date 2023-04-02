@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use opentelemetry::sdk::export::trace::stdout as otel_stdout;
 use opentelemetry::sdk::trace as otel_trace;
 use zero2prod::{
@@ -28,10 +30,10 @@ fn main() -> std::io::Result<()> {
         .init();
 
     // DB
-    let datastore = InMemDatastore::new();
+    let datastore = Arc::new(InMemDatastore::new());
 
     // LOGIC
-    let svc = Service::new_arc(datastore);
+    let svc = Arc::new(Service::new(datastore));
 
     // HTTP SERVER
     let http_address = format!("127.0.0.1:{}", config.http_port);
