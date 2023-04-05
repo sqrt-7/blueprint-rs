@@ -1,6 +1,5 @@
 use super::{Datastore, DatastoreError, DatastoreErrorType};
 use crate::logic::domain;
-use opentelemetry::Key;
 use std::{
     collections::HashMap,
     result,
@@ -10,13 +9,13 @@ use std::{
 type Result<T> = result::Result<T, DatastoreError>;
 
 pub struct InMemDatastore {
-    items: Mutex<HashMap<String, String>>, // <uuid, json>
+    subscriptions: Mutex<HashMap<(String, String), String>>, // <(user_id, journal_id), json>
 }
 
 impl InMemDatastore {
     pub fn new() -> Self {
         InMemDatastore {
-            items: Mutex::new(HashMap::new()),
+            subscriptions: Mutex::new(HashMap::new()),
         }
     }
 
@@ -46,8 +45,8 @@ impl InMemDatastore {
         }
     }
 
-    fn lock(&self) -> Result<MutexGuard<HashMap<String, String>>> {
-        match self.items.lock() {
+    fn lock(&self) -> Result<MutexGuard<HashMap<(String, String), String>>> {
+        match self.subscriptions.lock() {
             Ok(v) => Ok(v),
             Err(e) => Err(DatastoreError::new(
                 format!("InMemDatastore lock error: {}", e),
@@ -65,47 +64,53 @@ impl Default for InMemDatastore {
 
 impl Datastore for InMemDatastore {
     fn store_subscription(&self, sub: &domain::Subscription) -> Result<()> {
-        let result = {
-            let item = DBSubscription::from_domain(sub);
-            let data = InMemDatastore::to_json(&item)?;
+        let item = DBSubscription::from_domain(sub);
+        let data = InMemDatastore::to_json(&item)?;
 
-            self.lock()?.insert(item.uuid, data);
-            Ok(())
-        };
-
-        crate::custom_log(
-            log::Level::Info,
-            file!(),
-            "store_subscription",
-            vec![Key::new("result").string(format!("{:?}", result))],
-        );
-
-        result
+        self.lock()?.insert((item.user_id, item.journal_id), data);
+        Ok(())
     }
 
-    fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription> {
-        let result = {
-            match self.lock()?.get(uuid) {
-                Some(data) => {
-                    let item = InMemDatastore::from_json::<DBSubscription>(data)?;
-                    Ok(item.to_domain())
-                }
+    fn list_subscriptions_by_user(&self, user_id: &str) -> Result<Vec<domain::Subscription>> {
+        let db = self.lock()?;
+        let filtered = db
+            .iter()
+            .filter(|entry| entry.0 .0 == user_id)
+            .collect::<HashMap<_, _>>();
 
-                None => Err(DatastoreError::new(
-                    format!("uuid: {}", uuid),
-                    DatastoreErrorType::NotFound,
-                )),
-            }
-        };
+        let mut found = Vec::new();
 
-        crate::custom_log(
-            log::Level::Info,
-            file!(),
-            "get_subscription",
-            vec![Key::new("result").string(format!("{:?}", result))],
-        );
-        result
+        for js in filtered.values() {
+            let item = InMemDatastore::from_json::<DBSubscription>(js)?;
+            found.push(item.to_domain()?);
+        }
+
+        Ok(found)
     }
+
+    // fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription> {
+    //     let result = {
+    //         match self.lock()?.get(uuid) {
+    //             Some(data) => {
+    //                 let item = InMemDatastore::from_json::<DBSubscription>(data)?;
+    //                 Ok(item.to_domain())
+    //             }
+
+    //             None => Err(DatastoreError::new(
+    //                 format!("uuid: {}", uuid),
+    //                 DatastoreErrorType::NotFound,
+    //             )),
+    //         }
+    //     };
+
+    //     crate::custom_log(
+    //         log::Level::Info,
+    //         file!(),
+    //         "get_subscription",
+    //         vec![Key::new("result").string(format!("{:?}", result))],
+    //     );
+    //     result
+    // }
 }
 
 impl std::fmt::Debug for InMemDatastore {
@@ -118,21 +123,41 @@ impl std::fmt::Debug for InMemDatastore {
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct DBSubscription {
-    uuid: String,
-    name: String,
-    email: String,
+    user_id: String,
+    journal_id: String,
 }
 
 impl DBSubscription {
     fn from_domain(inp: &domain::Subscription) -> DBSubscription {
         DBSubscription {
-            uuid: inp.uuid().to_owned(),
-            name: inp.name().to_owned(),
-            email: inp.email().to_owned(),
+            user_id: inp.user_id().to_string(),
+            journal_id: inp.journal_id().to_string(),
         }
     }
 
-    fn to_domain(self) -> domain::Subscription {
-        domain::Subscription::new(self.uuid, self.email, self.name)
+    fn to_domain(self) -> Result<domain::Subscription> {
+        let user_uuid = domain::Uuid::try_parse(&(self.user_id));
+        if user_uuid.is_err() {
+            return Err(DatastoreError {
+                msg: format!("DBSubscription::to_domain() failed at user_id: {}", self.user_id),
+                error_type: DatastoreErrorType::DataCorruption,
+            });
+        }
+
+        let journal_uuid = domain::Uuid::try_parse(&(self.journal_id));
+        if journal_uuid.is_err() {
+            return Err(DatastoreError {
+                msg: format!(
+                    "DBSubscription::to_domain() failed at journal_id: {}",
+                    self.journal_id
+                ),
+                error_type: DatastoreErrorType::DataCorruption,
+            });
+        }
+
+        Ok(domain::Subscription::new(
+            user_uuid.unwrap(),
+            journal_uuid.unwrap(),
+        ))
     }
 }

@@ -1,2 +1,37 @@
 edition = "2021"
-max_width = 100
+
+max_width = 110
+array_width = 60
+chain_width = 60
+reorder_imports = true
+reorder_modules = true
+merge_derives = true
+match_block_trailing_comma = true
+hard_tabs = false
+force_explicit_abi = true
+newline_style = "Auto"
+use_try_shorthand = true
+
+# fn_args_layout = "Compressed"
+# attr_fn_like_width = 110
+# fn_call_width = 110
+# short_array_element_width_threshold = 10
+
+## Not stable
+# binop_separator = "Front"
+# brace_style = "SameLineWhere"
+# wrap_comments = true
+# comment_width = 80
+# control_brace_style = "ClosingNextLine"
+# empty_item_single_line = true
+# enum_discrim_align_threshold = 0
+# fn_single_line = false
+# force_multiline_blocks = true
+# imports_layout = "Vertical"
+# inline_attribute_width = 0
+# imports_granularity = "Item"
+# normalize_comments = true
+# reorder_impl_items = true
+# group_imports = "StdExternalCrate"
+# space_after_colon = true
+# space_before_colon = false

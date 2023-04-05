@@ -33,13 +33,7 @@ pub fn init_server(
             .wrap(from_fn(custom_logger_mw))
             // Telemetry
             .wrap_fn(move |req, srv| {
-                otel_tracer.in_span("otel_http", move |cx: Context| {
-                    cx.span().set_attributes([
-                        Key::new("method").string(req.method().to_string()),
-                        Key::new("url").string(req.uri().to_string()),
-                    ]);
-                    srv.call(req).with_context(cx)
-                })
+                otel_tracer.in_span("otel_http", move |cx: Context| srv.call(req).with_context(cx))
             })
             // Register endpoints
             .configure(routes::endpoints)

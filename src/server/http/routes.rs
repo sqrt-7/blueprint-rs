@@ -17,8 +17,10 @@ pub(super) fn endpoints(cfg: &mut ServiceConfig) {
     );
 
     cfg.route(
-        "/subscriptions/{uuid}",
-        Route::new().method(Method::GET).to(get_subscription),
+        "/subscriptions/{user_id}",
+        Route::new()
+            .method(Method::GET)
+            .to(list_subscriptions_by_user),
     );
 }
 
@@ -26,22 +28,22 @@ pub(super) async fn healthz(_: HttpRequest) -> impl Responder {
     HttpResponse::Ok()
 }
 
-pub(super) async fn get_subscription(
+pub(super) async fn list_subscriptions_by_user(
     svc: web::Data<Service>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ServiceError> {
-    let uuid = req.match_info().get("uuid").unwrap();
+    let user_id = req.match_info().get("user_id").unwrap();
 
     let svc = svc.get_ref();
-    let result = svc.get_subscription(uuid)?;
+    let result = svc.list_subscriptions_by_user(user_id)?;
 
     Ok(HttpResponse::Ok().json(result))
 }
 
 #[derive(serde::Deserialize)]
 pub(super) struct PostSubscriptionRequest {
-    email: String,
-    name: String,
+    user_id: String,
+    journal_id: String,
 }
 
 pub(super) async fn post_subscription(
@@ -58,7 +60,7 @@ pub(super) async fn post_subscription(
 
     let data = data.unwrap();
     let svc = svc.get_ref();
-    let result = svc.create_subscription(data.email, data.name)?;
+    let result = svc.create_subscription(data.user_id, data.journal_id)?;
 
     Ok(HttpResponse::Created().json(result))
 }

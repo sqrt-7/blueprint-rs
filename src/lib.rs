@@ -5,12 +5,7 @@ pub mod datastore;
 pub mod logic;
 pub mod server;
 
-pub fn custom_log(
-    level: log::Level,
-    target: &str,
-    msg: &str,
-    fields: Vec<opentelemetry::KeyValue>,
-) {
+pub fn custom_log(level: log::Level, target: &str, msg: &str, fields: Vec<opentelemetry::KeyValue>) {
     use opentelemetry::trace::TraceContextExt;
 
     let msg = msg.to_owned();

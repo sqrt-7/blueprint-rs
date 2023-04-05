@@ -8,7 +8,7 @@ pub mod inmem;
 
 pub trait Datastore: Send + Sync {
     fn store_subscription(&self, sub: &domain::Subscription) -> Result<(), DatastoreError>;
-    fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription, DatastoreError>;
+    fn list_subscriptions_by_user(&self, user_id: &str) -> Result<Vec<domain::Subscription>, DatastoreError>;
 }
 
 // ERRORS -----------------
@@ -22,6 +22,7 @@ pub struct DatastoreError {
 #[derive(Debug)]
 pub enum DatastoreErrorType {
     NotFound,
+    DataCorruption,
     Other,
 }
 

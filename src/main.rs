@@ -10,8 +10,8 @@ use zero2prod::{
 
 fn main() -> std::io::Result<()> {
     // CONFIG
-    let config = Config::new_from_file("config.yaml")
-        .unwrap_or_else(|err| panic!("failed to load config: {}", err));
+    let config =
+        Config::new_from_file("config.yaml").unwrap_or_else(|err| panic!("failed to load config: {}", err));
 
     // TRACING
     let otel_tracer = otel_stdout::new_pipeline()
@@ -37,8 +37,8 @@ fn main() -> std::io::Result<()> {
 
     // HTTP SERVER
     let http_address = format!("127.0.0.1:{}", config.http_port);
-    let http_listener = create_listener(http_address)
-        .unwrap_or_else(|err| panic!("unable to bind http_listener: {}", err));
+    let http_listener =
+        create_listener(http_address).unwrap_or_else(|err| panic!("unable to bind http_listener: {}", err));
     let http_server = http::init_server(http_listener, svc, otel_tracer)
         .unwrap_or_else(|err| panic!("failed to start http server: {}", err));
 
