@@ -10,6 +10,8 @@ use crate::new_error_code;
 new_error_code!(UNEXPECTED_ERROR);
 new_error_code!(DB_ERROR);
 new_error_code!(INVALID_UUID);
+new_error_code!(USER_NOT_FOUND);
+new_error_code!(USER_INVALID_DATA);
 new_error_code!(SUB_NOT_FOUND);
 new_error_code!(SUB_INVALID_DATA);
 

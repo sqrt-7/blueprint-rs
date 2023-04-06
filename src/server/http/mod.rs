@@ -10,7 +10,7 @@ use actix_web::{
 use actix_web_lab::middleware::{from_fn, Next};
 use log::Level;
 use opentelemetry::{
-    trace::{FutureExt, TraceContextExt, Tracer},
+    trace::{FutureExt, Tracer},
     Key,
 };
 use opentelemetry::{Context, KeyValue};

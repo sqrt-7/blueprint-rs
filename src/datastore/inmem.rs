@@ -3,18 +3,20 @@ use crate::logic::domain;
 use std::{
     collections::HashMap,
     result,
-    sync::{Mutex, MutexGuard},
+    sync::{Mutex, MutexGuard, PoisonError},
 };
 
 type Result<T> = result::Result<T, DatastoreError>;
 
 pub struct InMemDatastore {
+    users: Mutex<HashMap<String, String>>,                   // <uuid, json>
     subscriptions: Mutex<HashMap<(String, String), String>>, // <(user_id, journal_id), json>
 }
 
 impl InMemDatastore {
     pub fn new() -> Self {
         InMemDatastore {
+            users: Mutex::new(HashMap::new()),
             subscriptions: Mutex::new(HashMap::new()),
         }
     }
@@ -45,8 +47,10 @@ impl InMemDatastore {
         }
     }
 
-    fn lock(&self) -> Result<MutexGuard<HashMap<(String, String), String>>> {
-        match self.subscriptions.lock() {
+    fn check_lock<'a, T>(
+        lock_result: result::Result<MutexGuard<'a, T>, PoisonError<MutexGuard<'a, T>>>,
+    ) -> Result<MutexGuard<'a, T>> {
+        match lock_result {
             Ok(v) => Ok(v),
             Err(e) => Err(DatastoreError::new(
                 format!("InMemDatastore lock error: {}", e),
@@ -63,16 +67,42 @@ impl Default for InMemDatastore {
 }
 
 impl Datastore for InMemDatastore {
+    fn store_user(&self, obj: &domain::User) -> Result<()> {
+        let item = DBUser::from_domain(obj);
+        let data = InMemDatastore::to_json(&item)?;
+
+        let mut db = InMemDatastore::check_lock(self.users.lock())?;
+        db.insert(item.uuid, data);
+        Ok(())
+    }
+
+    fn get_user(&self, uuid: &str) -> Result<domain::User> {
+        let db = InMemDatastore::check_lock(self.users.lock())?;
+        match db.get(uuid) {
+            Some(data) => {
+                let item = InMemDatastore::from_json::<DBUser>(data)?;
+                Ok(item.to_domain()?)
+            },
+
+            None => Err(DatastoreError::new(
+                format!("uuid: {}", uuid),
+                DatastoreErrorType::NotFound,
+            )),
+        }
+    }
+
     fn store_subscription(&self, sub: &domain::Subscription) -> Result<()> {
+        let mut db = InMemDatastore::check_lock(self.subscriptions.lock())?;
+
         let item = DBSubscription::from_domain(sub);
         let data = InMemDatastore::to_json(&item)?;
 
-        self.lock()?.insert((item.user_id, item.journal_id), data);
+        db.insert((item.user_id, item.journal_id), data);
         Ok(())
     }
 
     fn list_subscriptions_by_user(&self, user_id: &str) -> Result<Vec<domain::Subscription>> {
-        let db = self.lock()?;
+        let db = InMemDatastore::check_lock(self.subscriptions.lock())?;
         let filtered = db
             .iter()
             .filter(|entry| entry.0 .0 == user_id)
@@ -87,30 +117,6 @@ impl Datastore for InMemDatastore {
 
         Ok(found)
     }
-
-    // fn get_subscription(&self, uuid: &str) -> Result<domain::Subscription> {
-    //     let result = {
-    //         match self.lock()?.get(uuid) {
-    //             Some(data) => {
-    //                 let item = InMemDatastore::from_json::<DBSubscription>(data)?;
-    //                 Ok(item.to_domain())
-    //             }
-
-    //             None => Err(DatastoreError::new(
-    //                 format!("uuid: {}", uuid),
-    //                 DatastoreErrorType::NotFound,
-    //             )),
-    //         }
-    //     };
-
-    //     crate::custom_log(
-    //         log::Level::Info,
-    //         file!(),
-    //         "get_subscription",
-    //         vec![Key::new("result").string(format!("{:?}", result))],
-    //     );
-    //     result
-    // }
 }
 
 impl std::fmt::Debug for InMemDatastore {
@@ -159,5 +165,50 @@ impl DBSubscription {
             user_uuid.unwrap(),
             journal_uuid.unwrap(),
         ))
+    }
+}
+
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+struct DBUser {
+    uuid: String,
+    email: String,
+    name: String,
+}
+
+impl DBUser {
+    fn from_domain(inp: &domain::User) -> DBUser {
+        DBUser {
+            uuid: inp.uuid().to_string(),
+            email: inp.email().to_string(),
+            name: inp.name().to_string(),
+        }
+    }
+
+    fn to_domain(self) -> Result<domain::User> {
+        let uuid = domain::Uuid::try_parse(&(self.uuid));
+        if uuid.is_err() {
+            return Err(DatastoreError {
+                msg: format!("DBUser::to_domain() failed at uuid: {}", self.uuid),
+                error_type: DatastoreErrorType::DataCorruption,
+            });
+        }
+
+        let email = domain::Email::try_parse(&(self.email));
+        if email.is_err() {
+            return Err(DatastoreError {
+                msg: format!("DBUser::to_domain() failed at email: {}", self.email),
+                error_type: DatastoreErrorType::DataCorruption,
+            });
+        }
+
+        let name = domain::UserName::try_parse(&(self.name));
+        if name.is_err() {
+            return Err(DatastoreError {
+                msg: format!("DBUser::to_domain() failed at name: {}", self.name),
+                error_type: DatastoreErrorType::DataCorruption,
+            });
+        }
+
+        Ok(domain::User::new(uuid.unwrap(), email.unwrap(), name.unwrap()))
     }
 }

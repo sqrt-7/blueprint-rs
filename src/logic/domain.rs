@@ -1,10 +1,30 @@
 use uuid::Uuid as uuid_bytes;
 
+use super::error::ServiceError;
+
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct User {
     uuid: Uuid,
     email: Email,
     name: UserName,
+}
+
+impl User {
+    pub fn new(uuid: Uuid, email: Email, name: UserName) -> Self {
+        User { uuid, email, name }
+    }
+
+    pub fn uuid(&self) -> &Uuid {
+        &self.uuid
+    }
+
+    pub fn email(&self) -> &Email {
+        &self.email
+    }
+
+    pub fn name(&self) -> &UserName {
+        &self.name
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -65,8 +85,34 @@ impl ToString for Uuid {
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Email(String);
 
+impl Email {
+    pub fn try_parse(s: &str) -> Result<Self, ServiceError> {
+        // todo
+        Ok(Email(s.to_string()))
+    }
+}
+
+impl ToString for Email {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct UserName(String);
+
+impl UserName {
+    pub fn try_parse(s: &str) -> Result<Self, ServiceError> {
+        // todo
+        Ok(UserName(s.to_string()))
+    }
+}
+
+impl ToString for UserName {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct JournalTitle(String);
