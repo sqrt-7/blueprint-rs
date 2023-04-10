@@ -5,6 +5,42 @@ pub mod datastore;
 pub mod logic;
 pub mod server;
 
+// todo: these should be in separate external modules
+
+use uuid::Uuid as uuid_bytes;
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct Uuid(String);
+
+impl Uuid {
+    pub fn new() -> Self {
+        Uuid(uuid_bytes::new_v4().to_string())
+    }
+}
+
+impl TryFrom<String> for Uuid {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match uuid_bytes::parse_str(value.as_str()) {
+            Ok(raw) => Ok(Uuid(raw.to_string())),
+            Err(_) => Err(format!("invalid uuid: {}", value)),
+        }
+    }
+}
+
+impl Default for Uuid {
+    fn default() -> Self {
+        Uuid::new()
+    }
+}
+
+impl ToString for Uuid {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
 pub fn custom_log(level: log::Level, target: &str, msg: &str, fields: Vec<opentelemetry::KeyValue>) {
     use opentelemetry::trace::TraceContextExt;
 

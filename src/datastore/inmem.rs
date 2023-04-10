@@ -142,21 +142,18 @@ impl DBSubscription {
     }
 
     fn to_domain(self) -> Result<domain::Subscription> {
-        let user_uuid = domain::Uuid::try_parse(&(self.user_id));
-        if user_uuid.is_err() {
+        let user_uuid = crate::Uuid::try_from(self.user_id);
+        if let Err(e) = user_uuid {
             return Err(DatastoreError {
-                msg: format!("DBSubscription::to_domain() failed at user_id: {}", self.user_id),
+                msg: format!("DBSubscription::to_domain() failed at user_id: {}", e),
                 error_type: DatastoreErrorType::DataCorruption,
             });
         }
 
-        let journal_uuid = domain::Uuid::try_parse(&(self.journal_id));
-        if journal_uuid.is_err() {
+        let journal_uuid = crate::Uuid::try_from(self.journal_id);
+        if let Err(e) = journal_uuid {
             return Err(DatastoreError {
-                msg: format!(
-                    "DBSubscription::to_domain() failed at journal_id: {}",
-                    self.journal_id
-                ),
+                msg: format!("DBSubscription::to_domain() failed at journal_id: {}", e),
                 error_type: DatastoreErrorType::DataCorruption,
             });
         }
@@ -185,26 +182,26 @@ impl DBUser {
     }
 
     fn to_domain(self) -> Result<domain::User> {
-        let uuid = domain::Uuid::try_parse(&(self.uuid));
-        if uuid.is_err() {
+        let uuid = crate::Uuid::try_from(self.uuid);
+        if let Err(e) = uuid {
             return Err(DatastoreError {
-                msg: format!("DBUser::to_domain() failed at uuid: {}", self.uuid),
+                msg: format!("DBUser::to_domain() failed at uuid: {}", e),
                 error_type: DatastoreErrorType::DataCorruption,
             });
         }
 
-        let email = domain::Email::try_parse(&(self.email));
-        if email.is_err() {
+        let email = domain::Email::try_from(self.email);
+        if let Err(e) = email {
             return Err(DatastoreError {
-                msg: format!("DBUser::to_domain() failed at email: {}", self.email),
+                msg: format!("DBUser::to_domain() failed at email: {}", e),
                 error_type: DatastoreErrorType::DataCorruption,
             });
         }
 
-        let name = domain::UserName::try_parse(&(self.name));
-        if name.is_err() {
+        let name = domain::UserName::try_from(self.name);
+        if let Err(e) = name {
             return Err(DatastoreError {
-                msg: format!("DBUser::to_domain() failed at name: {}", self.name),
+                msg: format!("DBUser::to_domain() failed at name: {}", e),
                 error_type: DatastoreErrorType::DataCorruption,
             });
         }

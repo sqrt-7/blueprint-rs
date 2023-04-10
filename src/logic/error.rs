@@ -1,11 +1,9 @@
+use crate::new_error_code;
 use actix_web::{
     http::{self, header::ContentType},
     HttpResponse, ResponseError,
 };
-
 use std::fmt::{Debug, Display};
-
-use crate::new_error_code;
 
 new_error_code!(UNEXPECTED_ERROR);
 new_error_code!(DB_ERROR);

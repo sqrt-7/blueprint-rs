@@ -1,20 +1,18 @@
-use uuid::Uuid as uuid_bytes;
-
 use super::error::ServiceError;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct User {
-    uuid: Uuid,
+    uuid: crate::Uuid,
     email: Email,
     name: UserName,
 }
 
 impl User {
-    pub fn new(uuid: Uuid, email: Email, name: UserName) -> Self {
+    pub fn new(uuid: crate::Uuid, email: Email, name: UserName) -> Self {
         User { uuid, email, name }
     }
 
-    pub fn uuid(&self) -> &Uuid {
+    pub fn uuid(&self) -> &crate::Uuid {
         &self.uuid
     }
 
@@ -29,66 +27,42 @@ impl User {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Journal {
-    uuid: Uuid,
+    uuid: crate::Uuid,
     title: JournalTitle,
     year: JournalYear,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Subscription {
-    user_id: Uuid,
-    journal_id: Uuid,
+    user_id: crate::Uuid,
+    journal_id: crate::Uuid,
 }
 
 impl Subscription {
-    pub fn new(user_id: Uuid, journal_id: Uuid) -> Self {
+    pub fn new(user_id: crate::Uuid, journal_id: crate::Uuid) -> Self {
         Subscription { user_id, journal_id }
     }
 
-    pub fn user_id(&self) -> &Uuid {
+    pub fn user_id(&self) -> &crate::Uuid {
         &self.user_id
     }
 
-    pub fn journal_id(&self) -> &Uuid {
+    pub fn journal_id(&self) -> &crate::Uuid {
         &self.journal_id
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct Uuid(String);
-
-impl Uuid {
-    pub fn new() -> Self {
-        Uuid(uuid_bytes::new_v4().to_string())
-    }
-
-    pub fn try_parse(s: &str) -> Result<Self, String> {
-        match uuid_bytes::parse_str(s) {
-            Ok(raw) => Ok(Uuid(raw.to_string())),
-            Err(_) => Err(format!("invalid uuid: {}", s)),
-        }
-    }
-}
-
-impl Default for Uuid {
-    fn default() -> Self {
-        Uuid::new()
-    }
-}
-
-impl ToString for Uuid {
-    fn to_string(&self) -> String {
-        self.0.clone()
     }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Email(String);
 
-impl Email {
-    pub fn try_parse(s: &str) -> Result<Self, ServiceError> {
+impl Email {}
+
+impl TryFrom<String> for Email {
+    type Error = ServiceError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
         // todo
-        Ok(Email(s.to_string()))
+        Ok(Email(value))
     }
 }
 
@@ -101,10 +75,14 @@ impl ToString for Email {
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct UserName(String);
 
-impl UserName {
-    pub fn try_parse(s: &str) -> Result<Self, ServiceError> {
+impl UserName {}
+
+impl TryFrom<String> for UserName {
+    type Error = ServiceError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
         // todo
-        Ok(UserName(s.to_string()))
+        Ok(UserName(value))
     }
 }
 
@@ -117,5 +95,23 @@ impl ToString for UserName {
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct JournalTitle(String);
 
+impl TryFrom<String> for JournalTitle {
+    type Error = ServiceError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        // todo
+        Ok(JournalTitle(value))
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct JournalYear(u32);
+
+impl TryFrom<u32> for JournalYear {
+    type Error = ServiceError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        // todo
+        Ok(JournalYear(value))
+    }
+}
