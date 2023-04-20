@@ -50,7 +50,10 @@ impl Service {
         }
     }
 
-    pub fn create_subscription(&self, data: dto::CreateSubscriptionRequest) -> Result<domain::Subscription> {
+    pub fn create_subscription(
+        &self,
+        data: dto::CreateSubscriptionRequest,
+    ) -> Result<domain::Subscription> {
         let user_uuid = check_valid_uuid(data.user_id)?;
         let journal_uuid = check_valid_uuid(data.journal_id)?;
 

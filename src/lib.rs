@@ -5,7 +5,12 @@ pub mod datastore;
 pub mod logic;
 pub mod server;
 
-// todo: these should be in separate external modules
+// Import proto generated files
+pub mod proto {
+    include!("../proto/blueprint.rs");
+}
+
+// todo: these should be in a separate external module
 
 use uuid::Uuid as uuid_bytes;
 
@@ -41,7 +46,12 @@ impl ToString for Uuid {
     }
 }
 
-pub fn custom_log(level: log::Level, target: &str, msg: &str, fields: Vec<opentelemetry::KeyValue>) {
+pub fn custom_log(
+    level: log::Level,
+    target: &str,
+    msg: &str,
+    fields: Vec<opentelemetry::KeyValue>,
+) {
     use opentelemetry::trace::TraceContextExt;
 
     let msg = msg.to_owned();

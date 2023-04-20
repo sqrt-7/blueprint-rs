@@ -1,4 +1,6 @@
-use super::error::ServiceError;
+use crate::{proto, Uuid};
+
+use super::error::{ServiceError, ServiceErrorType, CODE_INVALID_UUID};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct User {
@@ -25,6 +27,24 @@ impl User {
     }
 }
 
+impl TryFrom<proto::User> for User {
+    type Error = ServiceError;
+
+    fn try_from(value: crate::proto::User) -> Result<Self, Self::Error> {
+        let uuid = Uuid::try_from(value.uuid);
+        if let Err(e) = uuid {
+            return Err(ServiceError::new(CODE_INVALID_UUID)
+                .with_type(ServiceErrorType::Validation)
+                .with_internal(e));
+        };
+
+        let email = Email::try_from(value.email)?;
+        let name = UserName::try_from(value.name)?;
+
+        Ok(User::new(uuid.unwrap(), email, name))
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Journal {
     uuid: crate::Uuid,
@@ -40,7 +60,10 @@ pub struct Subscription {
 
 impl Subscription {
     pub fn new(user_id: crate::Uuid, journal_id: crate::Uuid) -> Self {
-        Subscription { user_id, journal_id }
+        Subscription {
+            user_id,
+            journal_id,
+        }
     }
 
     pub fn user_id(&self) -> &crate::Uuid {

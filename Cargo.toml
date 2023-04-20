@@ -1,26 +1,29 @@
 [package]
-name = "zero2prod"
+name = "blueprint"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
 path = "src/lib.rs"
-name = "zero2prod"
+name = "blueprint"
 
 [[bin]]
 path = "src/main.rs"
-name = "zero2prod"
+name = "blueprint"
 
 [dependencies]
 actix-service = "2.0.2"
 actix-web = "4"
 actix-web-lab = "0.19.1"
+bytes = "1.4.0"
 config = "0.13.2"
 env_logger = "0.10.0"
 log = "0.4.17"
 opentelemetry = "0.19.0"
 opentelemetry_api = "0.19.0"
 paste = "1.0.12"
+prost = "0.11.9"
+prost-types = "0.11.9"
 serde = { version = "1.0.147", features = ["derive"] }
 serde_json = "1.0.87"
 time = "0.3.20"
@@ -29,3 +32,6 @@ uuid = { version = "1.2.1", features = ["v4"] }
 
 [dev-dependencies]
 reqwest = { version = "0.11.12", features = ["json"] }
+
+[build-dependencies]
+prost-build = "0.11.9"

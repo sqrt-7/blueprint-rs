@@ -9,7 +9,7 @@ use std::{
 type Result<T> = result::Result<T, DatastoreError>;
 
 pub struct InMemDatastore {
-    users: Mutex<HashMap<String, String>>,                   // <uuid, json>
+    users: Mutex<HashMap<String, String>>, // <uuid, json>
     subscriptions: Mutex<HashMap<(String, String), String>>, // <(user_id, journal_id), json>
 }
 
@@ -206,6 +206,10 @@ impl DBUser {
             });
         }
 
-        Ok(domain::User::new(uuid.unwrap(), email.unwrap(), name.unwrap()))
+        Ok(domain::User::new(
+            uuid.unwrap(),
+            email.unwrap(),
+            name.unwrap(),
+        ))
     }
 }

@@ -1,11 +1,11 @@
 mod helpers;
 
 use actix_web::http;
-use std::collections::HashMap;
-use zero2prod::logic::{
+use blueprint::logic::{
     domain::Subscription,
     error::{ServiceError, ServiceErrorType, CODE_INVALID_UUID},
 };
+use std::collections::HashMap;
 
 // #[tokio::test]
 // async fn post_subscription_201_and_get_200() {

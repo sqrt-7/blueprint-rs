@@ -2,7 +2,7 @@ use std::sync::{self, Arc};
 
 use opentelemetry::sdk::{export::trace::stdout as otel_stdout, trace as otel_trace};
 
-use zero2prod::{
+use blueprint::{
     datastore::inmem::InMemDatastore,
     logic::Service,
     server::{self, http},
