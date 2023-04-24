@@ -7,42 +7,26 @@ pub mod server;
 
 // Import proto generated files
 pub mod proto {
+    use std::time::SystemTime;
+
     include!("../proto/blueprint.rs");
-}
 
-// todo: these should be in a separate external module
-
-use uuid::Uuid as uuid_bytes;
-
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct Uuid(String);
-
-impl Uuid {
-    pub fn new() -> Self {
-        Uuid(uuid_bytes::new_v4().to_string())
-    }
-}
-
-impl TryFrom<String> for Uuid {
-    type Error = String;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        match uuid_bytes::parse_str(value.as_str()) {
-            Ok(raw) => Ok(Uuid(raw.to_string())),
-            Err(_) => Err(format!("invalid uuid: {}", value)),
+    impl Metadata {
+        pub fn created(user_id: &str) -> Self {
+            let ts = prost_types::Timestamp::from(SystemTime::now());
+            Metadata {
+                created_by: user_id.to_owned(),
+                modified_by: user_id.to_owned(),
+                created_at: Some(ts.clone()),
+                modified_at: Some(ts),
+            }
         }
-    }
-}
 
-impl Default for Uuid {
-    fn default() -> Self {
-        Uuid::new()
-    }
-}
-
-impl ToString for Uuid {
-    fn to_string(&self) -> String {
-        self.0.clone()
+        pub fn modified(&mut self, mod_user_id: &str) {
+            let ts = prost_types::Timestamp::from(SystemTime::now());
+            self.modified_by = mod_user_id.to_owned();
+            self.modified_at = Some(ts);
+        }
     }
 }
 

@@ -3,7 +3,7 @@ pub mod dto;
 pub mod error;
 
 use self::{
-    domain::{Email, UserName},
+    domain::{Email, UserName, Uuid},
     error::*,
 };
 use crate::datastore::{Datastore, DatastoreError, DatastoreErrorType};
@@ -25,7 +25,7 @@ impl Service {
     // -----------------------
 
     pub fn create_user(&self, data: dto::CreateUserRequest) -> Result<domain::User> {
-        let new_uuid = crate::Uuid::new();
+        let new_uuid = Uuid::new();
         let email = Email::try_from(data.email)?;
         let name = UserName::try_from(data.name)?;
 
@@ -54,10 +54,11 @@ impl Service {
         &self,
         data: dto::CreateSubscriptionRequest,
     ) -> Result<domain::Subscription> {
-        let user_uuid = check_valid_uuid(data.user_id)?;
-        let journal_uuid = check_valid_uuid(data.journal_id)?;
+        let user_uuid = Uuid::try_from(data.user_id)?;
+        let journal_uuid = Uuid::try_from(data.journal_id)?;
+        let new_uuid = Uuid::new();
 
-        let sub = domain::Subscription::new(user_uuid, journal_uuid);
+        let sub = domain::Subscription::new(new_uuid, user_uuid, journal_uuid);
 
         if let Err(db_err) = self.datastore.store_subscription(&sub) {
             return Err(datastore_internal_error(db_err));
@@ -83,16 +84,6 @@ impl core::fmt::Debug for Service {
 // -----------------------
 // HELPERS ---------------
 // -----------------------
-
-fn check_valid_uuid(raw: String) -> Result<crate::Uuid> {
-    let uuid = crate::Uuid::try_from(raw);
-    if let Err(e) = uuid {
-        return Err(ServiceError::new(CODE_INVALID_UUID)
-            .with_type(ServiceErrorType::Validation)
-            .with_internal(e));
-    };
-    Ok(uuid.unwrap())
-}
 
 fn datastore_internal_error(db_err: DatastoreError) -> ServiceError {
     ServiceError::new(CODE_DB_ERROR)

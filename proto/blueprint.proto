@@ -6,9 +6,9 @@ import "google/protobuf/timestamp.proto";
 
 message Metadata {
     string created_by = 1;
-    string last_modified_by = 2;
+    string modified_by = 2;
     google.protobuf.Timestamp created_at = 3;
-    google.protobuf.Timestamp last_modified_at = 4;
+    google.protobuf.Timestamp modified_at = 4;
 }
 
 message User {
@@ -21,12 +21,13 @@ message User {
 message Journal {
     Metadata metadata = 1;
     string uuid = 2;
-    string name = 3;
+    string title = 3;
     uint32 year = 4;
 }
 
 message Subscription {
     Metadata metadata = 1;
-    string user_id = 2;
-    string journal_id = 3;
+    string uuid = 2;
+    string user_id = 3;
+    string journal_id = 4;
 }

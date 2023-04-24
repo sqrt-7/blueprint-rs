@@ -1,20 +1,55 @@
-use crate::{proto, Uuid};
-
 use super::error::{ServiceError, ServiceErrorType, CODE_INVALID_UUID};
+use crate::proto;
+use std::fmt::Display;
+use uuid::Uuid as uuid_bytes;
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
+pub struct Uuid(String);
+
+impl Uuid {
+    pub fn new() -> Self {
+        Uuid(uuid_bytes::new_v4().to_string())
+    }
+}
+
+impl TryFrom<String> for Uuid {
+    type Error = ServiceError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match uuid_bytes::parse_str(value.as_str()) {
+            Ok(raw) => Ok(Uuid(raw.to_string())),
+            Err(_) => Err(ServiceError::new(CODE_INVALID_UUID)
+                .with_type(ServiceErrorType::Validation)
+                .with_internal(format!("invalid uuid: {}", value))),
+        }
+    }
+}
+
+impl Default for Uuid {
+    fn default() -> Self {
+        Uuid::new()
+    }
+}
+
+impl Display for Uuid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct User {
-    uuid: crate::Uuid,
+    uuid: Uuid,
     email: Email,
     name: UserName,
 }
 
 impl User {
-    pub fn new(uuid: crate::Uuid, email: Email, name: UserName) -> Self {
+    pub fn new(uuid: Uuid, email: Email, name: UserName) -> Self {
         User { uuid, email, name }
     }
 
-    pub fn uuid(&self) -> &crate::Uuid {
+    pub fn uuid(&self) -> &Uuid {
         &self.uuid
     }
 
@@ -30,47 +65,65 @@ impl User {
 impl TryFrom<proto::User> for User {
     type Error = ServiceError;
 
-    fn try_from(value: crate::proto::User) -> Result<Self, Self::Error> {
-        let uuid = Uuid::try_from(value.uuid);
-        if let Err(e) = uuid {
-            return Err(ServiceError::new(CODE_INVALID_UUID)
-                .with_type(ServiceErrorType::Validation)
-                .with_internal(e));
-        };
-
+    fn try_from(value: proto::User) -> Result<Self, Self::Error> {
+        let uuid = Uuid::try_from(value.uuid)?;
         let email = Email::try_from(value.email)?;
         let name = UserName::try_from(value.name)?;
 
-        Ok(User::new(uuid.unwrap(), email, name))
+        Ok(User { uuid, email, name })
     }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Journal {
-    uuid: crate::Uuid,
+    uuid: Uuid,
     title: JournalTitle,
     year: JournalYear,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+impl Journal {
+    pub fn new(uuid: Uuid, title: JournalTitle, year: JournalYear) -> Self {
+        Journal { uuid, title, year }
+    }
+}
+
+impl TryFrom<proto::Journal> for Journal {
+    type Error = ServiceError;
+
+    fn try_from(value: proto::Journal) -> Result<Self, Self::Error> {
+        let uuid = Uuid::try_from(value.uuid)?;
+        let title = JournalTitle::try_from(value.title)?;
+        let year = JournalYear::try_from(value.year)?;
+
+        Ok(Journal { uuid, title, year })
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
 pub struct Subscription {
-    user_id: crate::Uuid,
-    journal_id: crate::Uuid,
+    uuid: Uuid,
+    user_id: Uuid,
+    journal_id: Uuid,
 }
 
 impl Subscription {
-    pub fn new(user_id: crate::Uuid, journal_id: crate::Uuid) -> Self {
+    pub fn new(uuid: Uuid, user_id: Uuid, journal_id: Uuid) -> Self {
         Subscription {
+            uuid,
             user_id,
             journal_id,
         }
     }
 
-    pub fn user_id(&self) -> &crate::Uuid {
+    pub fn uuid(&self) -> &Uuid {
+        &self.uuid
+    }
+
+    pub fn user_id(&self) -> &Uuid {
         &self.user_id
     }
 
-    pub fn journal_id(&self) -> &crate::Uuid {
+    pub fn journal_id(&self) -> &Uuid {
         &self.journal_id
     }
 }
@@ -89,9 +142,9 @@ impl TryFrom<String> for Email {
     }
 }
 
-impl ToString for Email {
-    fn to_string(&self) -> String {
-        self.0.clone()
+impl Display for Email {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -109,9 +162,9 @@ impl TryFrom<String> for UserName {
     }
 }
 
-impl ToString for UserName {
-    fn to_string(&self) -> String {
-        self.0.clone()
+impl Display for UserName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 

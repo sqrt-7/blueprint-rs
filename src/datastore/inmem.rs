@@ -1,23 +1,38 @@
 use super::{Datastore, DatastoreError, DatastoreErrorType};
 use crate::logic::domain;
+use core::panic;
 use std::{
     collections::HashMap,
     result,
-    sync::{Mutex, MutexGuard, PoisonError},
+    sync::{Mutex, MutexGuard},
 };
 
 type Result<T> = result::Result<T, DatastoreError>;
 
 pub struct InMemDatastore {
-    users: Mutex<HashMap<String, String>>, // <uuid, json>
-    subscriptions: Mutex<HashMap<(String, String), String>>, // <(user_id, journal_id), json>
+    // HashMap<String, String> and Vec<String> are Send+Sync
+    // so Mutex is also Send+Sync => no Arc needed
+    users: Mutex<HashMap<String, String>>,    // <uuid, json>
+    journals: Mutex<HashMap<String, String>>, // <uuid, json>
+    subs: Mutex<InMemDatastoreSubs>,
+}
+
+struct InMemDatastoreSubs {
+    subs_db: HashMap<String, String>,                 // <uuid, json>
+    subs_index_user: HashMap<String, Vec<String>>,    // <user_id, uuid>
+    subs_index_journal: HashMap<String, Vec<String>>, // <journal_id, uuid>
 }
 
 impl InMemDatastore {
     pub fn new() -> Self {
         InMemDatastore {
             users: Mutex::new(HashMap::new()),
-            subscriptions: Mutex::new(HashMap::new()),
+            journals: Mutex::new(HashMap::new()),
+            subs: Mutex::new(InMemDatastoreSubs {
+                subs_db: HashMap::new(),
+                subs_index_user: HashMap::new(),
+                subs_index_journal: HashMap::new(),
+            }),
         }
     }
 
@@ -42,20 +57,18 @@ impl InMemDatastore {
             Ok(v) => Ok(v),
             Err(e) => Err(DatastoreError::new(
                 format!("InMemDatastore json error: {}", e),
-                DatastoreErrorType::Other,
+                DatastoreErrorType::DataCorruption,
             )),
         }
     }
 
-    fn check_lock<'a, T>(
-        lock_result: result::Result<MutexGuard<'a, T>, PoisonError<MutexGuard<'a, T>>>,
-    ) -> Result<MutexGuard<'a, T>> {
-        match lock_result {
-            Ok(v) => Ok(v),
-            Err(e) => Err(DatastoreError::new(
-                format!("InMemDatastore lock error: {}", e),
-                DatastoreErrorType::Other,
-            )),
+    fn lock_db<T>(mx: &Mutex<T>) -> MutexGuard<T> {
+        match mx.lock() {
+            Ok(v) => v,
+            Err(e) => {
+                // Mutex is poisoned, should crash
+                panic!("InMemDatastore mutex failed: {}", e)
+            },
         }
     }
 }
@@ -68,20 +81,18 @@ impl Default for InMemDatastore {
 
 impl Datastore for InMemDatastore {
     fn store_user(&self, obj: &domain::User) -> Result<()> {
-        let item = DBUser::from_domain(obj);
-        let data = InMemDatastore::to_json(&item)?;
-
-        let mut db = InMemDatastore::check_lock(self.users.lock())?;
-        db.insert(item.uuid, data);
+        let data = InMemDatastore::to_json(obj)?;
+        let mut db = InMemDatastore::lock_db(&self.users);
+        db.insert(obj.uuid().to_string(), data);
         Ok(())
     }
 
     fn get_user(&self, uuid: &str) -> Result<domain::User> {
-        let db = InMemDatastore::check_lock(self.users.lock())?;
+        let db = InMemDatastore::lock_db(&self.users);
         match db.get(uuid) {
             Some(data) => {
-                let item = InMemDatastore::from_json::<DBUser>(data)?;
-                Ok(item.to_domain()?)
+                let item = InMemDatastore::from_json::<domain::User>(data)?;
+                Ok(item)
             },
 
             None => Err(DatastoreError::new(
@@ -92,27 +103,62 @@ impl Datastore for InMemDatastore {
     }
 
     fn store_subscription(&self, sub: &domain::Subscription) -> Result<()> {
-        let mut db = InMemDatastore::check_lock(self.subscriptions.lock())?;
+        let mut db = InMemDatastore::lock_db(&self.subs);
+        let data = InMemDatastore::to_json(sub)?;
 
-        let item = DBSubscription::from_domain(sub);
-        let data = InMemDatastore::to_json(&item)?;
+        // Add to db
+        db.subs_db.insert(sub.uuid().to_string(), data);
 
-        db.insert((item.user_id, item.journal_id), data);
+        // Add to user index
+        if let Some(v) = db.subs_index_user.get_mut(&sub.user_id().to_string()) {
+            let to_add = sub.uuid().to_string();
+            if !v.contains(&to_add) {
+                v.push(to_add);
+            }
+        } else {
+            db.subs_index_user.insert(
+                sub.user_id().to_string(),
+                Vec::from([sub.uuid().to_string()]),
+            );
+        }
+
+        // Add to journal index
+        if let Some(v) = db.subs_index_journal.get_mut(&sub.journal_id().to_string()) {
+            let to_add = sub.uuid().to_string();
+            if !v.contains(&to_add) {
+                v.push(to_add);
+            }
+        } else {
+            db.subs_index_journal.insert(
+                sub.journal_id().to_string(),
+                Vec::from([sub.uuid().to_string()]),
+            );
+        }
+
         Ok(())
     }
 
     fn list_subscriptions_by_user(&self, user_id: &str) -> Result<Vec<domain::Subscription>> {
-        let db = InMemDatastore::check_lock(self.subscriptions.lock())?;
-        let filtered = db
-            .iter()
-            .filter(|entry| entry.0 .0 == user_id)
-            .collect::<HashMap<_, _>>();
+        let db = InMemDatastore::lock_db(&self.subs);
 
         let mut found = Vec::new();
+        if let Some(sub_ids) = db.subs_index_user.get(user_id) {
+            for sid in sub_ids {
+                let entry = db.subs_db.get(sid);
+                if entry.is_none() {
+                    // This should never happen
+                    return Err(DatastoreError::new(
+                        format!(
+                            "subs_index_user exists for missing item: (user_id: {}, uuid: {})",
+                            user_id, sid
+                        ),
+                        DatastoreErrorType::DataCorruption,
+                    ));
+                }
 
-        for js in filtered.values() {
-            let item = InMemDatastore::from_json::<DBSubscription>(js)?;
-            found.push(item.to_domain()?);
+                let item = InMemDatastore::from_json::<domain::Subscription>(entry.unwrap())?;
+                found.push(item);
+            }
         }
 
         Ok(found)
@@ -125,91 +171,97 @@ impl std::fmt::Debug for InMemDatastore {
     }
 }
 
-// DTOs -------------------
+#[cfg(test)]
+mod tests {
+    use crate::{
+        datastore::{Datastore, DatastoreErrorType},
+        logic::domain::{Email, Subscription, User, UserName, Uuid},
+    };
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
-struct DBSubscription {
-    user_id: String,
-    journal_id: String,
-}
+    use super::InMemDatastore;
 
-impl DBSubscription {
-    fn from_domain(inp: &domain::Subscription) -> DBSubscription {
-        DBSubscription {
-            user_id: inp.user_id().to_string(),
-            journal_id: inp.journal_id().to_string(),
-        }
+    #[test]
+    fn add_user_get_user() {
+        let ds = InMemDatastore::new();
+        let usr = User::new(
+            Uuid::new(),
+            Email::try_from("test@test.com".to_owned()).unwrap(),
+            UserName::try_from("Jeff Jeffries".to_owned()).unwrap(),
+        );
+
+        ds.store_user(&usr).unwrap();
+
+        let res = ds.get_user(usr.uuid().to_string().as_str()).unwrap();
+        assert_eq!(res.uuid().to_string(), usr.uuid().to_string());
+        assert_eq!(res.email().to_string(), usr.email().to_string());
+        assert_eq!(res.name().to_string(), usr.name().to_string());
     }
 
-    fn to_domain(self) -> Result<domain::Subscription> {
-        let user_uuid = crate::Uuid::try_from(self.user_id);
-        if let Err(e) = user_uuid {
-            return Err(DatastoreError {
-                msg: format!("DBSubscription::to_domain() failed at user_id: {}", e),
-                error_type: DatastoreErrorType::DataCorruption,
-            });
+    #[test]
+    fn get_user_corrupt_data() {
+        let ds = InMemDatastore::new();
+        let user_id = Uuid::new();
+
+        // Add invalid json
+        {
+            let mut lock = ds.users.lock().unwrap();
+            lock.insert(user_id.to_string(), "{\"hello\": \"world\"}".to_owned());
         }
 
-        let journal_uuid = crate::Uuid::try_from(self.journal_id);
-        if let Err(e) = journal_uuid {
-            return Err(DatastoreError {
-                msg: format!("DBSubscription::to_domain() failed at journal_id: {}", e),
-                error_type: DatastoreErrorType::DataCorruption,
-            });
-        }
+        let res = ds
+            .get_user(user_id.to_string().as_str())
+            .expect_err("should be error");
 
-        Ok(domain::Subscription::new(
-            user_uuid.unwrap(),
-            journal_uuid.unwrap(),
-        ))
-    }
-}
-
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
-struct DBUser {
-    uuid: String,
-    email: String,
-    name: String,
-}
-
-impl DBUser {
-    fn from_domain(inp: &domain::User) -> DBUser {
-        DBUser {
-            uuid: inp.uuid().to_string(),
-            email: inp.email().to_string(),
-            name: inp.name().to_string(),
-        }
+        assert!(matches!(res.error_type, DatastoreErrorType::DataCorruption));
+        println!("{}", res.msg);
     }
 
-    fn to_domain(self) -> Result<domain::User> {
-        let uuid = crate::Uuid::try_from(self.uuid);
-        if let Err(e) = uuid {
-            return Err(DatastoreError {
-                msg: format!("DBUser::to_domain() failed at uuid: {}", e),
-                error_type: DatastoreErrorType::DataCorruption,
-            });
+    #[test]
+    fn add_subs_list_subs() {
+        let ds = InMemDatastore::new();
+
+        let user1 = Uuid::new();
+        let user2 = Uuid::new();
+
+        let sub1 = Subscription::new(Uuid::new(), user1.clone(), Uuid::new());
+        let sub2 = Subscription::new(Uuid::new(), user1.clone(), Uuid::new());
+        let sub3 = Subscription::new(Uuid::new(), user1.clone(), Uuid::new());
+        let sub4 = Subscription::new(Uuid::new(), user2.clone(), Uuid::new());
+        let sub5 = Subscription::new(Uuid::new(), user2.clone(), Uuid::new());
+        let sub6 = Subscription::new(Uuid::new(), user2.clone(), Uuid::new());
+
+        ds.store_subscription(&sub1).unwrap();
+        ds.store_subscription(&sub2).unwrap();
+        ds.store_subscription(&sub3).unwrap();
+        ds.store_subscription(&sub4).unwrap();
+        ds.store_subscription(&sub5).unwrap();
+        ds.store_subscription(&sub6).unwrap();
+
+        {
+            let res = ds
+                .list_subscriptions_by_user(user1.to_string().as_str())
+                .unwrap();
+
+            assert!(res.len() == 3);
+            assert!(res.contains(&sub1));
+            assert!(res.contains(&sub2));
+            assert!(res.contains(&sub3));
         }
 
-        let email = domain::Email::try_from(self.email);
-        if let Err(e) = email {
-            return Err(DatastoreError {
-                msg: format!("DBUser::to_domain() failed at email: {}", e),
-                error_type: DatastoreErrorType::DataCorruption,
-            });
+        {
+            let res = ds
+                .list_subscriptions_by_user(user2.to_string().as_str())
+                .unwrap();
+
+            assert!(res.len() == 3);
+            assert!(res.contains(&sub4));
+            assert!(res.contains(&sub5));
+            assert!(res.contains(&sub6));
         }
 
-        let name = domain::UserName::try_from(self.name);
-        if let Err(e) = name {
-            return Err(DatastoreError {
-                msg: format!("DBUser::to_domain() failed at name: {}", e),
-                error_type: DatastoreErrorType::DataCorruption,
-            });
+        {
+            let res = ds.list_subscriptions_by_user("some-fake-uuid").unwrap();
+            assert!(res.len() == 0);
         }
-
-        Ok(domain::User::new(
-            uuid.unwrap(),
-            email.unwrap(),
-            name.unwrap(),
-        ))
     }
 }

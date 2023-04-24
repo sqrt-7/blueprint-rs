@@ -6,7 +6,7 @@ pub mod inmem;
 // INTERFACE --------------
 
 pub trait Datastore: Send + Sync {
-    fn store_user(&self, obj: &domain::User) -> Result<(), DatastoreError>;
+    fn store_user(&self, usr: &domain::User) -> Result<(), DatastoreError>;
     fn get_user(&self, uuid: &str) -> Result<domain::User, DatastoreError>;
     fn store_subscription(&self, sub: &domain::Subscription) -> Result<(), DatastoreError>;
     fn list_subscriptions_by_user(
