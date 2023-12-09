@@ -2,32 +2,51 @@ syntax = "proto3";
 
 package blueprint;
 
-import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
 
-message Metadata {
-    string created_by = 1;
-    string modified_by = 2;
-    google.protobuf.Timestamp created_at = 3;
-    google.protobuf.Timestamp modified_at = 4;
+service Blueprint {
+    rpc CreateUser(CreateUserRequest) returns (User);
+    rpc GetUser(google.protobuf.StringValue) returns (User);
+    rpc CreateJournal(CreateJournalRequest) returns (Journal);
+    rpc GetJournal(google.protobuf.StringValue) returns (Journal);
+    rpc CreateSubscription(CreateSubscriptionRequest) returns (Subscription);
+    rpc ListSubscriptionsForUser(google.protobuf.StringValue) returns (SubscriptionList);
 }
 
 message User {
-    Metadata metadata = 1;
-    string uuid = 2;
-    string name = 3;
-    string email = 4;
+    string uuid = 1;
+    string name = 2;
+    string email = 3;
 }
 
 message Journal {
-    Metadata metadata = 1;
-    string uuid = 2;
-    string title = 3;
-    uint32 year = 4;
+    string uuid = 1;
+    string title = 2;
+    uint32 year = 3;
 }
 
 message Subscription {
-    Metadata metadata = 1;
-    string uuid = 2;
-    string user_id = 3;
-    string journal_id = 4;
+    string uuid = 1;
+    string user_id = 2;
+    string journal_id = 3;
 }
+
+message SubscriptionList {
+    repeated Subscription items = 1;
+}
+
+message CreateUserRequest {
+    string name = 1;
+    string email = 2;
+}
+
+message CreateJournalRequest {
+    string title = 1;
+    uint32 year = 2;
+}
+
+message CreateSubscriptionRequest {
+    string user_id = 1;
+    string journal_id = 2;
+}
+

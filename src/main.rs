@@ -1,45 +1,32 @@
 use blueprint::{
     datastore::inmem::InMemDatastore,
-    logic::Service,
-    server::{create_listener, http},
+    logic::Controller,
+    server::{grpc, http},
 };
-use opentelemetry::sdk::export::trace::stdout as otel_stdout;
-use opentelemetry::sdk::trace as otel_trace;
 use std::sync::Arc;
+use tracing_subscriber::prelude::*;
 
-fn main() -> std::io::Result<()> {
+fn main() {
     // CONFIG
     let config = Config::new_from_file("config.yaml")
         .unwrap_or_else(|err| panic!("failed to load config: {}", err));
 
-    // TRACING (turned off for now)
-    let otel_tracer = otel_stdout::new_pipeline()
-        .with_trace_config(otel_trace::config().with_sampler(otel_trace::Sampler::AlwaysOff))
-        .install_simple();
-
-    // LOGGING
-    env_logger::builder()
-        .parse_default_env()
-        .default_format()
-        .format_module_path(true)
-        .format_target(true)
-        .format_timestamp_millis()
-        .filter_level(log::LevelFilter::Info)
-        .target(env_logger::Target::Stdout)
-        .init();
+    // TRACING
+    init_tracing();
 
     // DB
     let datastore = Arc::new(InMemDatastore::new());
 
-    // LOGIC
-    let svc = Arc::new(Service::new(datastore));
+    // CONTROLLER
+    let ctrl = Arc::new(Controller::new(datastore));
 
     // HTTP SERVER
-    let http_address = format!("127.0.0.1:{}", config.http_port);
-    let http_listener = create_listener(http_address)
-        .unwrap_or_else(|err| panic!("unable to bind http_listener: {}", err));
-    let http_server = http::init_server(http_listener, svc, otel_tracer)
-        .unwrap_or_else(|err| panic!("failed to start http server: {}", err));
+    let http_server = http::init(config.http_port, ctrl.clone())
+        .unwrap_or_else(|err| panic!("failed to init http server: {}", err));
+
+    // GRPC SERVER
+    let grpc_server = grpc::init(config.grpc_port, ctrl)
+        .unwrap_or_else(|err| panic!("failed to init grpc server: {}", err));
 
     // RUNTIME
     let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -47,9 +34,41 @@ fn main() -> std::io::Result<()> {
         .build()
         .unwrap_or_else(|err| panic!("failed to build tokio runtime: {}", err));
 
-    let main_thread = async { http_server.await };
+    runtime.block_on(async {
+        let http_main = runtime.spawn(async {
+            tracing::info!("starting http server");
+            http_server.await
+        });
+        let grpc_main = runtime.spawn(async {
+            tracing::info!("starting grpc server");
+            grpc_server.await
+        });
 
-    runtime.block_on(main_thread)
+        if let Err(e) = tokio::try_join!(http_main, grpc_main) {
+            tracing::error!("main thread error: {}", e);
+        }
+    });
+
+    cleanup();
+}
+
+fn cleanup() {
+    tracing::info!("cleaning up");
+    // todo
+}
+
+fn init_tracing() {
+    // OpenTelemetry pipeline (turned off for now)
+    // otel_stdout::new_pipeline()
+    //     .with_trace_config(otel_trace::config().with_sampler(otel_trace::Sampler::AlwaysOff))
+    //     .install_simple()
+
+    // let my_subscriber = blueprint::tracing_json::JsonLogSubscriber::new();
+    // tracing::subscriber::set_global_default(my_subscriber).expect("setting tracing default failed");
+
+    tracing_subscriber::registry()
+        .with(blueprint::tracing_json::JsonLogSubscriber::new())
+        .init();
 }
 
 // CONFIG ---------------------------
@@ -57,11 +76,15 @@ fn main() -> std::io::Result<()> {
 #[derive(serde::Deserialize, Debug)]
 pub struct Config {
     pub http_port: u16,
+    pub grpc_port: u16,
 }
 
 impl Config {
-    pub fn new(http_port: u16) -> Self {
-        Config { http_port }
+    pub fn new(http_port: u16, grpc_port: u16) -> Self {
+        Config {
+            http_port,
+            grpc_port,
+        }
     }
 
     pub fn new_from_file(filepath: &str) -> Result<Self, config::ConfigError> {

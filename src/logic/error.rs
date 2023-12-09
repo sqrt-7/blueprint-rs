@@ -4,12 +4,15 @@ use actix_web::{
     HttpResponse, ResponseError,
 };
 use std::fmt::{Debug, Display};
+use tonic::{Code, Status};
 
 new_error_code!(UNEXPECTED_ERROR);
 new_error_code!(DB_ERROR);
 new_error_code!(INVALID_UUID);
 new_error_code!(USER_NOT_FOUND);
 new_error_code!(USER_INVALID_DATA);
+new_error_code!(JOURNAL_NOT_FOUND);
+new_error_code!(JOURNAL_INVALID_DATA);
 new_error_code!(SUB_NOT_FOUND);
 new_error_code!(SUB_INVALID_DATA);
 
@@ -25,8 +28,11 @@ pub struct ServiceError {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub enum ServiceErrorType {
     Internal,
-    Validation,
     NotFound,
+    AlreadyExists,
+    InvalidArgument,
+    Unauthorized,
+    Forbidden,
 }
 
 impl ServiceError {
@@ -61,12 +67,16 @@ impl ServiceError {
     }
 }
 
+// (HTTP) Convert ServiceError to actix_web response
 impl ResponseError for ServiceError {
     fn status_code(&self) -> http::StatusCode {
         match self.error_type {
             ServiceErrorType::Internal => http::StatusCode::INTERNAL_SERVER_ERROR,
-            ServiceErrorType::Validation => http::StatusCode::BAD_REQUEST,
             ServiceErrorType::NotFound => http::StatusCode::NOT_FOUND,
+            ServiceErrorType::AlreadyExists => http::StatusCode::CONFLICT,
+            ServiceErrorType::InvalidArgument => http::StatusCode::BAD_REQUEST,
+            ServiceErrorType::Unauthorized => http::StatusCode::UNAUTHORIZED,
+            ServiceErrorType::Forbidden => http::StatusCode::FORBIDDEN,
         }
     }
 
@@ -74,6 +84,22 @@ impl ResponseError for ServiceError {
         HttpResponse::build(self.status_code())
             .insert_header(ContentType::json())
             .json(self)
+    }
+}
+
+// (GRPC) Convert ServiceError to tonic::Status
+impl Into<Status> for ServiceError {
+    fn into(self) -> Status {
+        let grpc_code = match self.error_type {
+            ServiceErrorType::Internal => Code::Internal,
+            ServiceErrorType::NotFound => Code::NotFound,
+            ServiceErrorType::AlreadyExists => Code::AlreadyExists,
+            ServiceErrorType::InvalidArgument => Code::InvalidArgument,
+            ServiceErrorType::Unauthorized => Code::Unauthenticated,
+            ServiceErrorType::Forbidden => Code::PermissionDenied,
+        };
+
+        Status::new(grpc_code, self.code)
     }
 }
 
@@ -89,11 +115,7 @@ impl Debug for ServiceError {
 
 impl Display for ServiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "ServiceError{{ type: {}, code: {} }}",
-            self.error_type, self.code
-        )
+        write!(f, "ServiceError{{ type: {}, code: {} }}", self.error_type, self.code)
     }
 }
 

@@ -3,7 +3,7 @@ pub mod dto;
 pub mod error;
 
 use self::{
-    domain::{Email, UserName, Uuid},
+    domain::{Email, JournalTitle, JournalYear, UserName, Uuid},
     error::*,
 };
 use crate::datastore::{Datastore, DatastoreError, DatastoreErrorType};
@@ -11,13 +11,15 @@ use std::{result, sync::Arc};
 
 pub type Result<T> = result::Result<T, ServiceError>;
 
-pub struct Service {
+pub struct Controller {
     datastore: Arc<dyn Datastore>,
 }
 
-impl Service {
+impl Controller {
     pub fn new(datastore: Arc<dyn Datastore>) -> Self {
-        Service { datastore }
+        Controller {
+            datastore,
+        }
     }
 
     // -----------------------
@@ -50,6 +52,32 @@ impl Service {
         }
     }
 
+    pub fn create_journal(&self, data: dto::CreateJournalRequest) -> Result<domain::Journal> {
+        let new_uuid = Uuid::new();
+        let title = JournalTitle::try_from(data.title)?;
+        let year = JournalYear::try_from(data.year)?;
+
+        let obj = domain::Journal::new(new_uuid, title, year);
+
+        if let Err(db_err) = self.datastore.store_journal(&obj) {
+            return Err(datastore_internal_error(db_err));
+        };
+
+        Ok(obj)
+    }
+
+    pub fn get_journal(&self, uuid: &str) -> Result<domain::Journal> {
+        match self.datastore.get_journal(uuid) {
+            Ok(obj) => Ok(obj),
+            Err(db_err) => match db_err.error_type {
+                DatastoreErrorType::NotFound => Err(ServiceError::new(CODE_JOURNAL_NOT_FOUND)
+                    .with_type(ServiceErrorType::NotFound)
+                    .with_internal(format!("datastore: {}", db_err))),
+                _ => Err(datastore_internal_error(db_err)),
+            },
+        }
+    }
+
     pub fn create_subscription(
         &self,
         data: dto::CreateSubscriptionRequest,
@@ -75,9 +103,9 @@ impl Service {
     }
 }
 
-impl core::fmt::Debug for Service {
+impl core::fmt::Debug for Controller {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "logic::Service",)
+        write!(f, "logic::Controller",)
     }
 }
 

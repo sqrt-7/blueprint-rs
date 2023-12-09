@@ -1,11 +1,6 @@
 use super::{Datastore, DatastoreError, DatastoreErrorType};
 use crate::logic::domain;
-use core::panic;
-use std::{
-    collections::HashMap,
-    result,
-    sync::{Mutex, MutexGuard},
-};
+use std::{collections::HashMap, result, sync::Mutex};
 
 type Result<T> = result::Result<T, DatastoreError>;
 
@@ -61,16 +56,6 @@ impl InMemDatastore {
             )),
         }
     }
-
-    fn lock_db<T>(mx: &Mutex<T>) -> MutexGuard<T> {
-        match mx.lock() {
-            Ok(v) => v,
-            Err(e) => {
-                // Mutex is poisoned, should crash
-                panic!("InMemDatastore mutex failed: {}", e)
-            },
-        }
-    }
 }
 
 impl Default for InMemDatastore {
@@ -82,28 +67,48 @@ impl Default for InMemDatastore {
 impl Datastore for InMemDatastore {
     fn store_user(&self, obj: &domain::User) -> Result<()> {
         let data = InMemDatastore::to_json(obj)?;
-        let mut db = InMemDatastore::lock_db(&self.users);
+        let mut db = self.users.lock().unwrap();
         db.insert(obj.uuid().to_string(), data);
         Ok(())
     }
 
     fn get_user(&self, uuid: &str) -> Result<domain::User> {
-        let db = InMemDatastore::lock_db(&self.users);
+        let db = self.users.lock().unwrap();
         match db.get(uuid) {
             Some(data) => {
                 let item = InMemDatastore::from_json::<domain::User>(data)?;
                 Ok(item)
             },
 
-            None => Err(DatastoreError::new(
-                format!("uuid: {}", uuid),
-                DatastoreErrorType::NotFound,
-            )),
+            None => {
+                Err(DatastoreError::new(format!("uuid: {}", uuid), DatastoreErrorType::NotFound))
+            },
+        }
+    }
+
+    fn store_journal(&self, obj: &domain::Journal) -> Result<()> {
+        let data = InMemDatastore::to_json(obj)?;
+        let mut db = self.journals.lock().unwrap();
+        db.insert(obj.uuid().to_string(), data);
+        Ok(())
+    }
+
+    fn get_journal(&self, uuid: &str) -> Result<domain::Journal> {
+        let db = self.journals.lock().unwrap();
+        match db.get(uuid) {
+            Some(data) => {
+                let item = InMemDatastore::from_json::<domain::Journal>(data)?;
+                Ok(item)
+            },
+
+            None => {
+                Err(DatastoreError::new(format!("uuid: {}", uuid), DatastoreErrorType::NotFound))
+            },
         }
     }
 
     fn store_subscription(&self, sub: &domain::Subscription) -> Result<()> {
-        let mut db = InMemDatastore::lock_db(&self.subs);
+        let mut db = self.subs.lock().unwrap();
         let data = InMemDatastore::to_json(sub)?;
 
         // Add to db
@@ -116,10 +121,8 @@ impl Datastore for InMemDatastore {
                 v.push(to_add);
             }
         } else {
-            db.subs_index_user.insert(
-                sub.user_id().to_string(),
-                Vec::from([sub.uuid().to_string()]),
-            );
+            db.subs_index_user
+                .insert(sub.user_id().to_string(), Vec::from([sub.uuid().to_string()]));
         }
 
         // Add to journal index
@@ -129,17 +132,15 @@ impl Datastore for InMemDatastore {
                 v.push(to_add);
             }
         } else {
-            db.subs_index_journal.insert(
-                sub.journal_id().to_string(),
-                Vec::from([sub.uuid().to_string()]),
-            );
+            db.subs_index_journal
+                .insert(sub.journal_id().to_string(), Vec::from([sub.uuid().to_string()]));
         }
 
         Ok(())
     }
 
     fn list_subscriptions_by_user(&self, user_id: &str) -> Result<Vec<domain::Subscription>> {
-        let db = InMemDatastore::lock_db(&self.subs);
+        let db = self.subs.lock().unwrap();
 
         let mut found = Vec::new();
         if let Some(sub_ids) = db.subs_index_user.get(user_id) {
@@ -213,7 +214,6 @@ mod tests {
             .expect_err("should be error");
 
         assert!(matches!(res.error_type, DatastoreErrorType::DataCorruption));
-        println!("{}", res.msg);
     }
 
     #[test]
@@ -231,7 +231,10 @@ mod tests {
         let sub6 = Subscription::new(Uuid::new(), user2.clone(), Uuid::new());
 
         ds.store_subscription(&sub1).unwrap();
+        ds.store_subscription(&sub1).unwrap(); // duplicate
+        ds.store_subscription(&sub1).unwrap(); // duplicate
         ds.store_subscription(&sub2).unwrap();
+        ds.store_subscription(&sub2).unwrap(); // duplicate
         ds.store_subscription(&sub3).unwrap();
         ds.store_subscription(&sub4).unwrap();
         ds.store_subscription(&sub5).unwrap();

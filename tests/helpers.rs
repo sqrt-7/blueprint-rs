@@ -4,7 +4,7 @@ use opentelemetry::sdk::{export::trace::stdout as otel_stdout, trace as otel_tra
 
 use blueprint::{
     datastore::inmem::InMemDatastore,
-    logic::Service,
+    logic::Controller,
     server::{self, http},
 };
 
@@ -14,7 +14,9 @@ pub struct TestServer {
 
 impl TestServer {
     fn new(basepath: String) -> Self {
-        TestServer { basepath }
+        TestServer {
+            basepath,
+        }
     }
 }
 
@@ -45,7 +47,7 @@ pub fn spawn_app() -> TestServer {
     let actual_http_port = listener.local_addr().unwrap().port();
 
     let ds = Arc::new(InMemDatastore::new());
-    let svc = Arc::new(Service::new(ds));
+    let svc = Arc::new(Controller::new(ds));
 
     let http_server = http::init_server(listener, svc, tracer).unwrap_or_else(|err| {
         panic!("failed to start http server: {}", err);

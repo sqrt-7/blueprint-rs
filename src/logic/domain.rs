@@ -19,7 +19,7 @@ impl TryFrom<String> for Uuid {
         match uuid_bytes::parse_str(value.as_str()) {
             Ok(raw) => Ok(Uuid(raw.to_string())),
             Err(_) => Err(ServiceError::new(CODE_INVALID_UUID)
-                .with_type(ServiceErrorType::Validation)
+                .with_type(ServiceErrorType::InvalidArgument)
                 .with_internal(format!("invalid uuid: {}", value))),
         }
     }
@@ -46,7 +46,11 @@ pub struct User {
 
 impl User {
     pub fn new(uuid: Uuid, email: Email, name: UserName) -> Self {
-        User { uuid, email, name }
+        User {
+            uuid,
+            email,
+            name,
+        }
     }
 
     pub fn uuid(&self) -> &Uuid {
@@ -70,7 +74,21 @@ impl TryFrom<proto::User> for User {
         let email = Email::try_from(value.email)?;
         let name = UserName::try_from(value.name)?;
 
-        Ok(User { uuid, email, name })
+        Ok(User {
+            uuid,
+            email,
+            name,
+        })
+    }
+}
+
+impl Into<proto::User> for User {
+    fn into(self) -> proto::User {
+        proto::User {
+            uuid: self.uuid.0,
+            name: self.name.0,
+            email: self.email.0,
+        }
     }
 }
 
@@ -83,7 +101,23 @@ pub struct Journal {
 
 impl Journal {
     pub fn new(uuid: Uuid, title: JournalTitle, year: JournalYear) -> Self {
-        Journal { uuid, title, year }
+        Journal {
+            uuid,
+            title,
+            year,
+        }
+    }
+
+    pub fn uuid(&self) -> &Uuid {
+        &self.uuid
+    }
+
+    pub fn title(&self) -> &JournalTitle {
+        &self.title
+    }
+
+    pub fn year(&self) -> &JournalYear {
+        &self.year
     }
 }
 
@@ -95,7 +129,27 @@ impl TryFrom<proto::Journal> for Journal {
         let title = JournalTitle::try_from(value.title)?;
         let year = JournalYear::try_from(value.year)?;
 
-        Ok(Journal { uuid, title, year })
+        Ok(Journal {
+            uuid,
+            title,
+            year,
+        })
+    }
+}
+
+impl Into<proto::Journal> for Journal {
+    fn into(self) -> proto::Journal {
+        proto::Journal {
+            uuid: self.uuid.0,
+            title: self.title.0,
+            year: self.year.0,
+        }
+    }
+}
+
+impl Display for JournalTitle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -125,6 +179,30 @@ impl Subscription {
 
     pub fn journal_id(&self) -> &Uuid {
         &self.journal_id
+    }
+}
+
+impl Into<proto::Subscription> for Subscription {
+    fn into(self) -> proto::Subscription {
+        proto::Subscription {
+            uuid: self.uuid.0,
+            user_id: self.user_id.0,
+            journal_id: self.journal_id.0,
+        }
+    }
+}
+
+impl Into<proto::SubscriptionList> for Vec<Subscription> {
+    fn into(self) -> proto::SubscriptionList {
+        let mut res = proto::SubscriptionList {
+            items: Vec::new(),
+        };
+
+        for val in self.into_iter() {
+            res.items.push(val.into());
+        }
+
+        res
     }
 }
 

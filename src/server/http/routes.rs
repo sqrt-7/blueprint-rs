@@ -1,7 +1,7 @@
 use crate::logic::{
     dto,
     error::{ServiceError, ServiceErrorType, CODE_SUB_INVALID_DATA, CODE_USER_INVALID_DATA},
-    Service,
+    Controller,
 };
 use actix_web::{
     http::Method,
@@ -13,14 +13,8 @@ pub(super) fn endpoints(cfg: &mut ServiceConfig) {
     cfg.route("/healthz", Route::new().method(Method::GET).to(healthz));
 
     cfg.route("/users", Route::new().method(Method::POST).to(post_user));
-    cfg.route(
-        "/users/{uuid}",
-        Route::new().method(Method::GET).to(get_user),
-    );
-    cfg.route(
-        "/subscriptions",
-        Route::new().method(Method::POST).to(post_subscription),
-    );
+    cfg.route("/users/{uuid}", Route::new().method(Method::GET).to(get_user));
+    cfg.route("/subscriptions", Route::new().method(Method::POST).to(post_subscription));
     cfg.route(
         "/subscriptions/{user_id}",
         Route::new()
@@ -33,15 +27,16 @@ pub(super) async fn healthz(_: HttpRequest) -> impl Responder {
     HttpResponse::Ok()
 }
 
+#[tracing::instrument(skip(svc))]
 pub(super) async fn post_user(
-    svc: web::Data<Service>,
+    svc: web::Data<Controller>,
     body: web::Bytes,
 ) -> Result<HttpResponse, ServiceError> {
     let data = serde_json::from_slice::<dto::CreateUserRequest>(&body);
 
     if let Err(json_err) = data {
         return Err(ServiceError::new(CODE_USER_INVALID_DATA)
-            .with_type(ServiceErrorType::Validation)
+            .with_type(ServiceErrorType::InvalidArgument)
             .with_internal(format!("request json parse: {}", json_err)));
     }
 
@@ -52,8 +47,9 @@ pub(super) async fn post_user(
     Ok(HttpResponse::Created().json(result))
 }
 
+#[tracing::instrument(skip(svc))]
 pub(super) async fn get_user(
-    svc: web::Data<Service>,
+    svc: web::Data<Controller>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ServiceError> {
     let uuid = req.match_info().get("uuid").unwrap();
@@ -64,8 +60,9 @@ pub(super) async fn get_user(
     Ok(HttpResponse::Ok().json(result))
 }
 
+#[tracing::instrument(skip(svc))]
 pub(super) async fn list_subscriptions_by_user(
-    svc: web::Data<Service>,
+    svc: web::Data<Controller>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ServiceError> {
     let user_id = req.match_info().get("user_id").unwrap();
@@ -76,15 +73,16 @@ pub(super) async fn list_subscriptions_by_user(
     Ok(HttpResponse::Ok().json(result))
 }
 
+#[tracing::instrument(skip(svc))]
 pub(super) async fn post_subscription(
-    svc: web::Data<Service>,
+    svc: web::Data<Controller>,
     body: web::Bytes,
 ) -> Result<HttpResponse, ServiceError> {
     let data = serde_json::from_slice::<dto::CreateSubscriptionRequest>(&body);
 
     if let Err(json_err) = data {
         return Err(ServiceError::new(CODE_SUB_INVALID_DATA)
-            .with_type(ServiceErrorType::Validation)
+            .with_type(ServiceErrorType::InvalidArgument)
             .with_internal(format!("request json parse: {}", json_err)));
     }
 
