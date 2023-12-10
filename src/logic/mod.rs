@@ -12,11 +12,11 @@ use std::{result, sync::Arc};
 pub type Result<T> = result::Result<T, ServiceError>;
 
 pub struct Controller {
-    datastore: Arc<dyn Datastore>,
+    datastore: Arc<dyn Datastore + Send + Sync>,
 }
 
 impl Controller {
-    pub fn new(datastore: Arc<dyn Datastore>) -> Self {
+    pub fn new(datastore: Arc<dyn Datastore + Send + Sync>) -> Self {
         Controller {
             datastore,
         }
@@ -41,7 +41,8 @@ impl Controller {
     }
 
     pub fn get_user(&self, uuid: &str) -> Result<domain::User> {
-        match self.datastore.get_user(uuid) {
+        let uuid = Uuid::try_from(uuid)?;
+        match self.datastore.get_user(&uuid) {
             Ok(obj) => Ok(obj),
             Err(db_err) => match db_err.error_type {
                 DatastoreErrorType::NotFound => Err(ServiceError::new(CODE_USER_NOT_FOUND)
@@ -67,7 +68,8 @@ impl Controller {
     }
 
     pub fn get_journal(&self, uuid: &str) -> Result<domain::Journal> {
-        match self.datastore.get_journal(uuid) {
+        let uuid = Uuid::try_from(uuid)?;
+        match self.datastore.get_journal(&uuid) {
             Ok(obj) => Ok(obj),
             Err(db_err) => match db_err.error_type {
                 DatastoreErrorType::NotFound => Err(ServiceError::new(CODE_JOURNAL_NOT_FOUND)

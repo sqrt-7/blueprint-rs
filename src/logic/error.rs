@@ -88,9 +88,9 @@ impl ResponseError for ServiceError {
 }
 
 // (GRPC) Convert ServiceError to tonic::Status
-impl Into<Status> for ServiceError {
-    fn into(self) -> Status {
-        let grpc_code = match self.error_type {
+impl From<ServiceError> for Status {
+    fn from(val: ServiceError) -> Self {
+        let grpc_code = match val.error_type {
             ServiceErrorType::Internal => Code::Internal,
             ServiceErrorType::NotFound => Code::NotFound,
             ServiceErrorType::AlreadyExists => Code::AlreadyExists,
@@ -99,7 +99,7 @@ impl Into<Status> for ServiceError {
             ServiceErrorType::Forbidden => Code::PermissionDenied,
         };
 
-        Status::new(grpc_code, self.code)
+        Status::new(grpc_code, val.code)
     }
 }
 

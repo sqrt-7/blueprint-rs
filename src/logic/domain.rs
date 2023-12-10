@@ -12,16 +12,24 @@ impl Uuid {
     }
 }
 
-impl TryFrom<String> for Uuid {
+impl TryFrom<&str> for Uuid {
     type Error = ServiceError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        match uuid_bytes::parse_str(value.as_str()) {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match uuid_bytes::parse_str(value) {
             Ok(raw) => Ok(Uuid(raw.to_string())),
             Err(_) => Err(ServiceError::new(CODE_INVALID_UUID)
                 .with_type(ServiceErrorType::InvalidArgument)
                 .with_internal(format!("invalid uuid: {}", value))),
         }
+    }
+}
+
+impl TryFrom<String> for Uuid {
+    type Error = ServiceError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Uuid::try_from(value.as_str())
     }
 }
 
@@ -82,12 +90,12 @@ impl TryFrom<proto::User> for User {
     }
 }
 
-impl Into<proto::User> for User {
-    fn into(self) -> proto::User {
+impl From<User> for proto::User {
+    fn from(val: User) -> Self {
         proto::User {
-            uuid: self.uuid.0,
-            name: self.name.0,
-            email: self.email.0,
+            uuid: val.uuid.0,
+            name: val.name.0,
+            email: val.email.0,
         }
     }
 }
@@ -137,12 +145,12 @@ impl TryFrom<proto::Journal> for Journal {
     }
 }
 
-impl Into<proto::Journal> for Journal {
-    fn into(self) -> proto::Journal {
+impl From<Journal> for proto::Journal {
+    fn from(val: Journal) -> Self {
         proto::Journal {
-            uuid: self.uuid.0,
-            title: self.title.0,
-            year: self.year.0,
+            uuid: val.uuid.0,
+            title: val.title.0,
+            year: val.year.0,
         }
     }
 }
@@ -182,23 +190,23 @@ impl Subscription {
     }
 }
 
-impl Into<proto::Subscription> for Subscription {
-    fn into(self) -> proto::Subscription {
+impl From<Subscription> for proto::Subscription {
+    fn from(val: Subscription) -> Self {
         proto::Subscription {
-            uuid: self.uuid.0,
-            user_id: self.user_id.0,
-            journal_id: self.journal_id.0,
+            uuid: val.uuid.0,
+            user_id: val.user_id.0,
+            journal_id: val.journal_id.0,
         }
     }
 }
 
-impl Into<proto::SubscriptionList> for Vec<Subscription> {
-    fn into(self) -> proto::SubscriptionList {
+impl From<Vec<Subscription>> for proto::SubscriptionList {
+    fn from(val: Vec<Subscription>) -> Self {
         let mut res = proto::SubscriptionList {
             items: Vec::new(),
         };
 
-        for val in self.into_iter() {
+        for val in val.into_iter() {
             res.items.push(val.into());
         }
 

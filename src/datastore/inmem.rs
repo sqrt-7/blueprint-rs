@@ -72,9 +72,9 @@ impl Datastore for InMemDatastore {
         Ok(())
     }
 
-    fn get_user(&self, uuid: &str) -> Result<domain::User> {
+    fn get_user(&self, uuid: &domain::Uuid) -> Result<domain::User> {
         let db = self.users.lock().unwrap();
-        match db.get(uuid) {
+        match db.get(&uuid.to_string()) {
             Some(data) => {
                 let item = InMemDatastore::from_json::<domain::User>(data)?;
                 Ok(item)
@@ -93,9 +93,9 @@ impl Datastore for InMemDatastore {
         Ok(())
     }
 
-    fn get_journal(&self, uuid: &str) -> Result<domain::Journal> {
+    fn get_journal(&self, uuid: &domain::Uuid) -> Result<domain::Journal> {
         let db = self.journals.lock().unwrap();
-        match db.get(uuid) {
+        match db.get(&uuid.to_string()) {
             Some(data) => {
                 let item = InMemDatastore::from_json::<domain::Journal>(data)?;
                 Ok(item)
@@ -182,6 +182,11 @@ mod tests {
     use super::InMemDatastore;
 
     #[test]
+
+    fn datastore_is_send_sync() {
+        let _: Box<dyn Send + Sync> = Box::new(InMemDatastore::new());
+    }
+
     fn add_user_get_user() {
         let ds = InMemDatastore::new();
         let usr = User::new(
@@ -192,7 +197,7 @@ mod tests {
 
         ds.store_user(&usr).unwrap();
 
-        let res = ds.get_user(usr.uuid().to_string().as_str()).unwrap();
+        let res = ds.get_user(usr.uuid()).unwrap();
         assert_eq!(res.uuid().to_string(), usr.uuid().to_string());
         assert_eq!(res.email().to_string(), usr.email().to_string());
         assert_eq!(res.name().to_string(), usr.name().to_string());
@@ -209,9 +214,7 @@ mod tests {
             lock.insert(user_id.to_string(), "{\"hello\": \"world\"}".to_owned());
         }
 
-        let res = ds
-            .get_user(user_id.to_string().as_str())
-            .expect_err("should be error");
+        let res = ds.get_user(&user_id).expect_err("should be error");
 
         assert!(matches!(res.error_type, DatastoreErrorType::DataCorruption));
     }

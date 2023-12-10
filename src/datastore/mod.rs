@@ -5,11 +5,11 @@ pub mod inmem;
 
 // INTERFACE --------------
 
-pub trait Datastore: Send + Sync {
+pub trait Datastore {
     fn store_user(&self, usr: &domain::User) -> Result<(), DatastoreError>;
-    fn get_user(&self, uuid: &str) -> Result<domain::User, DatastoreError>;
+    fn get_user(&self, uuid: &domain::Uuid) -> Result<domain::User, DatastoreError>;
     fn store_journal(&self, j: &domain::Journal) -> Result<(), DatastoreError>;
-    fn get_journal(&self, uuid: &str) -> Result<domain::Journal, DatastoreError>;
+    fn get_journal(&self, uuid: &domain::Uuid) -> Result<domain::Journal, DatastoreError>;
     fn store_subscription(&self, sub: &domain::Subscription) -> Result<(), DatastoreError>;
     fn list_subscriptions_by_user(
         &self,
