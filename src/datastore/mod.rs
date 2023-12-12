@@ -7,13 +7,13 @@ pub mod inmem;
 
 pub trait Datastore {
     fn store_user(&self, usr: &domain::User) -> Result<(), DatastoreError>;
-    fn get_user(&self, uuid: &domain::Uuid) -> Result<domain::User, DatastoreError>;
+    fn get_user(&self, id: &domain::ID) -> Result<domain::User, DatastoreError>;
     fn store_journal(&self, j: &domain::Journal) -> Result<(), DatastoreError>;
-    fn get_journal(&self, uuid: &domain::Uuid) -> Result<domain::Journal, DatastoreError>;
+    fn get_journal(&self, id: &domain::ID) -> Result<domain::Journal, DatastoreError>;
     fn store_subscription(&self, sub: &domain::Subscription) -> Result<(), DatastoreError>;
     fn list_subscriptions_by_user(
         &self,
-        user_id: &domain::Uuid,
+        user_id: &domain::ID,
     ) -> Result<Vec<domain::Subscription>, DatastoreError>;
 }
 

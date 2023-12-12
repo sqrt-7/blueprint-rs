@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use actix_web::http;
 use blueprint::logic::{
-    domain::{User, Uuid},
+    domain::{User, ID},
     error::{ServiceError, ServiceErrorType, CODE_USER_NOT_FOUND},
 };
 use serde_json;
@@ -41,10 +41,10 @@ async fn post_user_201_get_user_200() {
 
     assert_eq!(name, created_usr.name().to_string());
     assert_eq!(email, created_usr.email().to_string());
-    assert!(created_usr.uuid().to_string().len() == 36);
+    assert!(created_usr.id().to_string().len() == 36);
 
     let get_usr: User = {
-        let endpoint = format!("{}/users/{}", srv.basepath, created_usr.uuid());
+        let endpoint = format!("{}/users/{}", srv.basepath, created_usr.id());
 
         let resp = client
             .get(endpoint)
@@ -62,8 +62,8 @@ async fn post_user_201_get_user_200() {
     assert_eq!(name, get_usr.name().to_string());
     assert_eq!(email, get_usr.email().to_string());
     assert_eq!(
-        created_usr.uuid().to_string(),
-        get_usr.uuid().to_string()
+        created_usr.id().to_string(),
+        get_usr.id().to_string()
     );
 }
 
@@ -72,8 +72,8 @@ async fn get_user_404() {
     let srv = helpers::spawn_app();
     let client = reqwest::Client::new();
 
-    let uuid = Uuid::new().to_string();
-    let endpoint = format!("{}/users/{}", srv.basepath, uuid);
+    let id = ID::new().to_string();
+    let endpoint = format!("{}/users/{}", srv.basepath, id);
 
     let resp = client
         .get(endpoint)

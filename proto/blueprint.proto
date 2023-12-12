@@ -14,19 +14,19 @@ service Blueprint {
 }
 
 message User {
-    string uuid = 1;
+    string id = 1;
     string name = 2;
     string email = 3;
 }
 
 message Journal {
-    string uuid = 1;
+    string id = 1;
     string title = 2;
     uint32 year = 3;
 }
 
 message Subscription {
-    string uuid = 1;
+    string id = 1;
     string user_id = 2;
     string journal_id = 3;
 }

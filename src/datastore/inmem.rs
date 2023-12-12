@@ -7,15 +7,15 @@ type Result<T> = result::Result<T, DatastoreError>;
 pub struct InMemDatastore {
     // HashMap<String, String> and Vec<String> are Send+Sync
     // so Mutex is also Send+Sync => no Arc needed
-    users: Mutex<HashMap<String, String>>,    // <uuid, json>
-    journals: Mutex<HashMap<String, String>>, // <uuid, json>
+    users: Mutex<HashMap<String, String>>,    // <id, json>
+    journals: Mutex<HashMap<String, String>>, // <id, json>
     subs: Mutex<DatastoreSubs>,
 }
 
 struct DatastoreSubs {
-    subs_db: HashMap<String, String>,                 // <uuid, json>
-    subs_index_user: HashMap<String, Vec<String>>,    // <user_id, uuid>
-    subs_index_journal: HashMap<String, Vec<String>>, // <journal_id, uuid>
+    subs_db: HashMap<String, String>,                 // <id, json>
+    subs_index_user: HashMap<String, Vec<String>>,    // <user_id, id>
+    subs_index_journal: HashMap<String, Vec<String>>, // <journal_id, id>
 }
 
 impl InMemDatastore {
@@ -68,20 +68,20 @@ impl Datastore for InMemDatastore {
     fn store_user(&self, obj: &domain::User) -> Result<()> {
         let data = InMemDatastore::to_json(obj)?;
         let mut db = self.users.lock().unwrap();
-        db.insert(obj.uuid().to_string(), data);
+        db.insert(obj.id().to_string(), data);
         Ok(())
     }
 
-    fn get_user(&self, uuid: &domain::Uuid) -> Result<domain::User> {
+    fn get_user(&self, id: &domain::ID) -> Result<domain::User> {
         let db = self.users.lock().unwrap();
-        match db.get(&uuid.to_string()) {
+        match db.get(&id.to_string()) {
             Some(data) => {
                 let item = InMemDatastore::from_json::<domain::User>(data)?;
                 Ok(item)
             },
 
             None => Err(DatastoreError::new(
-                format!("uuid: {}", uuid),
+                format!("id: {}", id),
                 DatastoreErrorType::NotFound,
             )),
         }
@@ -90,20 +90,20 @@ impl Datastore for InMemDatastore {
     fn store_journal(&self, obj: &domain::Journal) -> Result<()> {
         let data = InMemDatastore::to_json(obj)?;
         let mut db = self.journals.lock().unwrap();
-        db.insert(obj.uuid().to_string(), data);
+        db.insert(obj.id().to_string(), data);
         Ok(())
     }
 
-    fn get_journal(&self, uuid: &domain::Uuid) -> Result<domain::Journal> {
+    fn get_journal(&self, id: &domain::ID) -> Result<domain::Journal> {
         let db = self.journals.lock().unwrap();
-        match db.get(&uuid.to_string()) {
+        match db.get(&id.to_string()) {
             Some(data) => {
                 let item = InMemDatastore::from_json::<domain::Journal>(data)?;
                 Ok(item)
             },
 
             None => Err(DatastoreError::new(
-                format!("uuid: {}", uuid),
+                format!("id: {}", id),
                 DatastoreErrorType::NotFound,
             )),
         }
@@ -114,31 +114,31 @@ impl Datastore for InMemDatastore {
         let data = InMemDatastore::to_json(sub)?;
 
         // Add to db
-        db.subs_db.insert(sub.uuid().to_string(), data);
+        db.subs_db.insert(sub.id().to_string(), data);
 
         // Add to user index
         if let Some(v) = db.subs_index_user.get_mut(&sub.user_id().to_string()) {
-            let to_add = sub.uuid().to_string();
+            let to_add = sub.id().to_string();
             if !v.contains(&to_add) {
                 v.push(to_add);
             }
         } else {
             db.subs_index_user.insert(
                 sub.user_id().to_string(),
-                Vec::from([sub.uuid().to_string()]),
+                Vec::from([sub.id().to_string()]),
             );
         }
 
         // Add to journal index
         if let Some(v) = db.subs_index_journal.get_mut(&sub.journal_id().to_string()) {
-            let to_add = sub.uuid().to_string();
+            let to_add = sub.id().to_string();
             if !v.contains(&to_add) {
                 v.push(to_add);
             }
         } else {
             db.subs_index_journal.insert(
                 sub.journal_id().to_string(),
-                Vec::from([sub.uuid().to_string()]),
+                Vec::from([sub.id().to_string()]),
             );
         }
 
@@ -147,7 +147,7 @@ impl Datastore for InMemDatastore {
 
     fn list_subscriptions_by_user(
         &self,
-        user_id: &domain::Uuid,
+        user_id: &domain::ID,
     ) -> Result<Vec<domain::Subscription>> {
         let db = self.subs.lock().unwrap();
 
@@ -159,7 +159,7 @@ impl Datastore for InMemDatastore {
                     // This should never happen
                     return Err(DatastoreError::new(
                         format!(
-                            "subs_index_user exists for missing item: (user_id: {}, uuid: {})",
+                            "subs_index_user exists for missing item: (user_id: {}, id: {})",
                             user_id, sid
                         ),
                         DatastoreErrorType::DataCorruption,
@@ -185,7 +185,7 @@ impl std::fmt::Debug for InMemDatastore {
 mod tests {
     use crate::{
         datastore::{Datastore, DatastoreErrorType},
-        logic::domain::{self, Email, Subscription, User, UserName, Uuid},
+        logic::domain::{self, Email, Subscription, User, UserName, ID},
     };
 
     use super::InMemDatastore;
@@ -199,15 +199,15 @@ mod tests {
     fn add_user_get_user() {
         let ds = InMemDatastore::new();
         let usr = User::new(
-            Uuid::new(),
+            ID::new(),
             Email::try_from("test@test.com".to_owned()).unwrap(),
             UserName::try_from("Jeff Jeffries".to_owned()).unwrap(),
         );
 
         ds.store_user(&usr).unwrap();
 
-        let res = ds.get_user(usr.uuid()).unwrap();
-        assert_eq!(res.uuid().to_string(), usr.uuid().to_string());
+        let res = ds.get_user(usr.id()).unwrap();
+        assert_eq!(res.id().to_string(), usr.id().to_string());
         assert_eq!(res.email().to_string(), usr.email().to_string());
         assert_eq!(res.name().to_string(), usr.name().to_string());
     }
@@ -215,7 +215,7 @@ mod tests {
     #[test]
     fn get_user_corrupt_data() {
         let ds = InMemDatastore::new();
-        let user_id = Uuid::new();
+        let user_id = ID::new();
 
         // Add invalid json
         {
@@ -238,15 +238,15 @@ mod tests {
     fn add_subs_list_subs() {
         let ds = InMemDatastore::new();
 
-        let user1 = Uuid::new();
-        let user2 = Uuid::new();
+        let user1 = ID::new();
+        let user2 = ID::new();
 
-        let sub1 = Subscription::new(Uuid::new(), user1.clone(), Uuid::new());
-        let sub2 = Subscription::new(Uuid::new(), user1.clone(), Uuid::new());
-        let sub3 = Subscription::new(Uuid::new(), user1.clone(), Uuid::new());
-        let sub4 = Subscription::new(Uuid::new(), user2.clone(), Uuid::new());
-        let sub5 = Subscription::new(Uuid::new(), user2.clone(), Uuid::new());
-        let sub6 = Subscription::new(Uuid::new(), user2.clone(), Uuid::new());
+        let sub1 = Subscription::new(ID::new(), user1.clone(), ID::new());
+        let sub2 = Subscription::new(ID::new(), user1.clone(), ID::new());
+        let sub3 = Subscription::new(ID::new(), user1.clone(), ID::new());
+        let sub4 = Subscription::new(ID::new(), user2.clone(), ID::new());
+        let sub5 = Subscription::new(ID::new(), user2.clone(), ID::new());
+        let sub6 = Subscription::new(ID::new(), user2.clone(), ID::new());
 
         ds.store_subscription(&sub1).unwrap();
         ds.store_subscription(&sub1).unwrap(); // duplicate
@@ -277,8 +277,8 @@ mod tests {
         }
 
         {
-            let some_fake_uuid = domain::Uuid::new();
-            let res = ds.list_subscriptions_by_user(&some_fake_uuid).unwrap();
+            let some_fake_id = domain::ID::new();
+            let res = ds.list_subscriptions_by_user(&some_fake_id).unwrap();
             assert!(res.len() == 0);
         }
     }

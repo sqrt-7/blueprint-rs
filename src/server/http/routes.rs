@@ -20,7 +20,7 @@ pub(super) fn endpoints(cfg: &mut ServiceConfig) {
         Route::new().method(Method::POST).to(post_user),
     );
     cfg.route(
-        "/users/{uuid}",
+        "/users/{id}",
         Route::new().method(Method::GET).to(get_user),
     );
     cfg.route(
@@ -64,10 +64,10 @@ pub(super) async fn get_user(
     svc: web::Data<Controller>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ServiceError> {
-    let uuid = req.match_info().get("uuid").unwrap();
+    let id = req.match_info().get("id").unwrap();
 
     let svc = svc.get_ref();
-    let result = svc.get_user(uuid)?;
+    let result = svc.get_user(id)?;
 
     Ok(HttpResponse::Ok().json(result))
 }

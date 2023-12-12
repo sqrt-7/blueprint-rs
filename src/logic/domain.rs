@@ -1,45 +1,45 @@
-use super::error::{ServiceError, ServiceErrorType, CODE_INVALID_UUID};
+use super::error::{ServiceError, ServiceErrorType, CODE_INVALID_ID};
 use crate::proto;
 use std::fmt::Display;
 use uuid::Uuid as uuid_bytes;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
-pub struct Uuid(String);
+pub struct ID(String);
 
-impl Uuid {
+impl ID {
     pub fn new() -> Self {
-        Uuid(uuid_bytes::new_v4().to_string())
+        ID(uuid_bytes::new_v4().to_string())
     }
 }
 
-impl TryFrom<&str> for Uuid {
+impl TryFrom<&str> for ID {
     type Error = ServiceError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match uuid_bytes::parse_str(value) {
-            Ok(raw) => Ok(Uuid(raw.to_string())),
-            Err(_) => Err(ServiceError::new(CODE_INVALID_UUID)
+            Ok(raw) => Ok(ID(raw.to_string())),
+            Err(_) => Err(ServiceError::new(CODE_INVALID_ID)
                 .with_type(ServiceErrorType::InvalidArgument)
-                .with_internal(format!("invalid uuid: {}", value))),
+                .with_internal(format!("invalid id: {}", value))),
         }
     }
 }
 
-impl TryFrom<String> for Uuid {
+impl TryFrom<String> for ID {
     type Error = ServiceError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        Uuid::try_from(value.as_str())
+        ID::try_from(value.as_str())
     }
 }
 
-impl Default for Uuid {
+impl Default for ID {
     fn default() -> Self {
-        Uuid::new()
+        ID::new()
     }
 }
 
-impl Display for Uuid {
+impl Display for ID {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -47,22 +47,22 @@ impl Display for Uuid {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct User {
-    uuid: Uuid,
+    id: ID,
     email: Email,
     name: UserName,
 }
 
 impl User {
-    pub fn new(uuid: Uuid, email: Email, name: UserName) -> Self {
+    pub fn new(id: ID, email: Email, name: UserName) -> Self {
         User {
-            uuid,
+            id,
             email,
             name,
         }
     }
 
-    pub fn uuid(&self) -> &Uuid {
-        &self.uuid
+    pub fn id(&self) -> &ID {
+        &self.id
     }
 
     pub fn email(&self) -> &Email {
@@ -78,12 +78,12 @@ impl TryFrom<proto::User> for User {
     type Error = ServiceError;
 
     fn try_from(value: proto::User) -> Result<Self, Self::Error> {
-        let uuid = Uuid::try_from(value.uuid)?;
+        let id = ID::try_from(value.id)?;
         let email = Email::try_from(value.email)?;
         let name = UserName::try_from(value.name)?;
 
         Ok(User {
-            uuid,
+            id,
             email,
             name,
         })
@@ -93,7 +93,7 @@ impl TryFrom<proto::User> for User {
 impl From<User> for proto::User {
     fn from(val: User) -> Self {
         proto::User {
-            uuid: val.uuid.0,
+            id: val.id.0,
             name: val.name.0,
             email: val.email.0,
         }
@@ -102,22 +102,22 @@ impl From<User> for proto::User {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Journal {
-    uuid: Uuid,
+    id: ID,
     title: JournalTitle,
     year: JournalYear,
 }
 
 impl Journal {
-    pub fn new(uuid: Uuid, title: JournalTitle, year: JournalYear) -> Self {
+    pub fn new(id: ID, title: JournalTitle, year: JournalYear) -> Self {
         Journal {
-            uuid,
+            id,
             title,
             year,
         }
     }
 
-    pub fn uuid(&self) -> &Uuid {
-        &self.uuid
+    pub fn id(&self) -> &ID {
+        &self.id
     }
 
     pub fn title(&self) -> &JournalTitle {
@@ -133,12 +133,12 @@ impl TryFrom<proto::Journal> for Journal {
     type Error = ServiceError;
 
     fn try_from(value: proto::Journal) -> Result<Self, Self::Error> {
-        let uuid = Uuid::try_from(value.uuid)?;
+        let id = ID::try_from(value.id)?;
         let title = JournalTitle::try_from(value.title)?;
         let year = JournalYear::try_from(value.year)?;
 
         Ok(Journal {
-            uuid,
+            id,
             title,
             year,
         })
@@ -148,7 +148,7 @@ impl TryFrom<proto::Journal> for Journal {
 impl From<Journal> for proto::Journal {
     fn from(val: Journal) -> Self {
         proto::Journal {
-            uuid: val.uuid.0,
+            id: val.id.0,
             title: val.title.0,
             year: val.year.0,
         }
@@ -163,29 +163,29 @@ impl Display for JournalTitle {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
 pub struct Subscription {
-    uuid: Uuid,
-    user_id: Uuid,
-    journal_id: Uuid,
+    id: ID,
+    user_id: ID,
+    journal_id: ID,
 }
 
 impl Subscription {
-    pub fn new(uuid: Uuid, user_id: Uuid, journal_id: Uuid) -> Self {
+    pub fn new(id: ID, user_id: ID, journal_id: ID) -> Self {
         Subscription {
-            uuid,
+            id,
             user_id,
             journal_id,
         }
     }
 
-    pub fn uuid(&self) -> &Uuid {
-        &self.uuid
+    pub fn id(&self) -> &ID {
+        &self.id
     }
 
-    pub fn user_id(&self) -> &Uuid {
+    pub fn user_id(&self) -> &ID {
         &self.user_id
     }
 
-    pub fn journal_id(&self) -> &Uuid {
+    pub fn journal_id(&self) -> &ID {
         &self.journal_id
     }
 }
@@ -193,7 +193,7 @@ impl Subscription {
 impl From<Subscription> for proto::Subscription {
     fn from(val: Subscription) -> Self {
         proto::Subscription {
-            uuid: val.uuid.0,
+            id: val.id.0,
             user_id: val.user_id.0,
             journal_id: val.journal_id.0,
         }

@@ -3,7 +3,7 @@ pub mod dto;
 pub mod error;
 
 use self::{
-    domain::{Email, JournalTitle, JournalYear, UserName, Uuid},
+    domain::{Email, JournalTitle, JournalYear, UserName, ID},
     error::*,
 };
 use crate::datastore::{Datastore, DatastoreError, DatastoreErrorType};
@@ -27,11 +27,11 @@ impl Controller {
     // -----------------------
 
     pub fn create_user(&self, data: dto::CreateUserRequest) -> Result<domain::User> {
-        let new_uuid = Uuid::new();
+        let new_id = ID::new();
         let email = Email::try_from(data.email)?;
         let name = UserName::try_from(data.name)?;
 
-        let obj = domain::User::new(new_uuid, email, name);
+        let obj = domain::User::new(new_id, email, name);
 
         if let Err(db_err) = self.datastore.store_user(&obj) {
             return Err(datastore_internal_error(db_err));
@@ -40,9 +40,9 @@ impl Controller {
         Ok(obj)
     }
 
-    pub fn get_user(&self, uuid: &str) -> Result<domain::User> {
-        let uuid = Uuid::try_from(uuid)?;
-        match self.datastore.get_user(&uuid) {
+    pub fn get_user(&self, id: &str) -> Result<domain::User> {
+        let id = ID::try_from(id)?;
+        match self.datastore.get_user(&id) {
             Ok(obj) => Ok(obj),
             Err(db_err) => match db_err.error_type {
                 DatastoreErrorType::NotFound => Err(ServiceError::new(CODE_USER_NOT_FOUND)
@@ -54,11 +54,11 @@ impl Controller {
     }
 
     pub fn create_journal(&self, data: dto::CreateJournalRequest) -> Result<domain::Journal> {
-        let new_uuid = Uuid::new();
+        let new_id = ID::new();
         let title = JournalTitle::try_from(data.title)?;
         let year = JournalYear::try_from(data.year)?;
 
-        let obj = domain::Journal::new(new_uuid, title, year);
+        let obj = domain::Journal::new(new_id, title, year);
 
         if let Err(db_err) = self.datastore.store_journal(&obj) {
             return Err(datastore_internal_error(db_err));
@@ -67,9 +67,9 @@ impl Controller {
         Ok(obj)
     }
 
-    pub fn get_journal(&self, uuid: &str) -> Result<domain::Journal> {
-        let uuid = Uuid::try_from(uuid)?;
-        match self.datastore.get_journal(&uuid) {
+    pub fn get_journal(&self, id: &str) -> Result<domain::Journal> {
+        let id = ID::try_from(id)?;
+        match self.datastore.get_journal(&id) {
             Ok(obj) => Ok(obj),
             Err(db_err) => match db_err.error_type {
                 DatastoreErrorType::NotFound => Err(ServiceError::new(CODE_JOURNAL_NOT_FOUND)
@@ -84,11 +84,11 @@ impl Controller {
         &self,
         data: dto::CreateSubscriptionRequest,
     ) -> Result<domain::Subscription> {
-        let user_uuid = Uuid::try_from(data.user_id)?;
-        let journal_uuid = Uuid::try_from(data.journal_id)?;
-        let new_uuid = Uuid::new();
+        let user_id = ID::try_from(data.user_id)?;
+        let journal_id = ID::try_from(data.journal_id)?;
+        let new_id = ID::new();
 
-        let sub = domain::Subscription::new(new_uuid, user_uuid, journal_uuid);
+        let sub = domain::Subscription::new(new_id, user_id, journal_id);
 
         if let Err(db_err) = self.datastore.store_subscription(&sub) {
             return Err(datastore_internal_error(db_err));
@@ -98,7 +98,7 @@ impl Controller {
     }
 
     pub fn list_subscriptions_by_user(&self, user_id: &str) -> Result<Vec<domain::Subscription>> {
-        let user_id = Uuid::try_from(user_id)?;
+        let user_id = ID::try_from(user_id)?;
         match self.datastore.list_subscriptions_by_user(&user_id) {
             Ok(res) => Ok(res),
             Err(db_err) => Err(datastore_internal_error(db_err)),
