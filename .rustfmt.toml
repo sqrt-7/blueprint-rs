@@ -1,5 +1,7 @@
 edition = "2021"
 
+#ignore = ["tests"]
+
 #max_width = 120
 use_small_heuristics = "Off"
 array_width = 60
