@@ -98,7 +98,8 @@ impl Controller {
     }
 
     pub fn list_subscriptions_by_user(&self, user_id: &str) -> Result<Vec<domain::Subscription>> {
-        match self.datastore.list_subscriptions_by_user(user_id) {
+        let user_id = Uuid::try_from(user_id)?;
+        match self.datastore.list_subscriptions_by_user(&user_id) {
             Ok(res) => Ok(res),
             Err(db_err) => Err(datastore_internal_error(db_err)),
         }

@@ -13,7 +13,7 @@ pub trait Datastore {
     fn store_subscription(&self, sub: &domain::Subscription) -> Result<(), DatastoreError>;
     fn list_subscriptions_by_user(
         &self,
-        user_id: &str,
+        user_id: &domain::Uuid,
     ) -> Result<Vec<domain::Subscription>, DatastoreError>;
 }
 

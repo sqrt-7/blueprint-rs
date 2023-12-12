@@ -9,10 +9,10 @@ pub struct InMemDatastore {
     // so Mutex is also Send+Sync => no Arc needed
     users: Mutex<HashMap<String, String>>,    // <uuid, json>
     journals: Mutex<HashMap<String, String>>, // <uuid, json>
-    subs: Mutex<InMemDatastoreSubs>,
+    subs: Mutex<DatastoreSubs>,
 }
 
-struct InMemDatastoreSubs {
+struct DatastoreSubs {
     subs_db: HashMap<String, String>,                 // <uuid, json>
     subs_index_user: HashMap<String, Vec<String>>,    // <user_id, uuid>
     subs_index_journal: HashMap<String, Vec<String>>, // <journal_id, uuid>
@@ -23,7 +23,7 @@ impl InMemDatastore {
         InMemDatastore {
             users: Mutex::new(HashMap::new()),
             journals: Mutex::new(HashMap::new()),
-            subs: Mutex::new(InMemDatastoreSubs {
+            subs: Mutex::new(DatastoreSubs {
                 subs_db: HashMap::new(),
                 subs_index_user: HashMap::new(),
                 subs_index_journal: HashMap::new(),
@@ -139,11 +139,14 @@ impl Datastore for InMemDatastore {
         Ok(())
     }
 
-    fn list_subscriptions_by_user(&self, user_id: &str) -> Result<Vec<domain::Subscription>> {
+    fn list_subscriptions_by_user(
+        &self,
+        user_id: &domain::Uuid,
+    ) -> Result<Vec<domain::Subscription>> {
         let db = self.subs.lock().unwrap();
 
         let mut found = Vec::new();
-        if let Some(sub_ids) = db.subs_index_user.get(user_id) {
+        if let Some(sub_ids) = db.subs_index_user.get(&user_id.to_string()) {
             for sid in sub_ids {
                 let entry = db.subs_db.get(sid);
                 if entry.is_none() {
@@ -176,7 +179,7 @@ impl std::fmt::Debug for InMemDatastore {
 mod tests {
     use crate::{
         datastore::{Datastore, DatastoreErrorType},
-        logic::domain::{Email, Subscription, User, UserName, Uuid},
+        logic::domain::{self, Email, Subscription, User, UserName, Uuid},
     };
 
     use super::InMemDatastore;
@@ -244,9 +247,7 @@ mod tests {
         ds.store_subscription(&sub6).unwrap();
 
         {
-            let res = ds
-                .list_subscriptions_by_user(user1.to_string().as_str())
-                .unwrap();
+            let res = ds.list_subscriptions_by_user(&user1).unwrap();
 
             assert!(res.len() == 3);
             assert!(res.contains(&sub1));
@@ -255,9 +256,7 @@ mod tests {
         }
 
         {
-            let res = ds
-                .list_subscriptions_by_user(user2.to_string().as_str())
-                .unwrap();
+            let res = ds.list_subscriptions_by_user(&user2).unwrap();
 
             assert!(res.len() == 3);
             assert!(res.contains(&sub4));
@@ -266,7 +265,8 @@ mod tests {
         }
 
         {
-            let res = ds.list_subscriptions_by_user("some-fake-uuid").unwrap();
+            let some_fake_uuid = domain::Uuid::new();
+            let res = ds.list_subscriptions_by_user(&some_fake_uuid).unwrap();
             assert!(res.len() == 0);
         }
     }

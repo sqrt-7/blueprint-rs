@@ -36,7 +36,10 @@ pub fn init(
             .configure(routes::endpoints)
     };
 
-    let server = actix_web::HttpServer::new(app_init).listen(listener)?.run();
+    let server = actix_web::HttpServer::new(app_init)
+        .shutdown_timeout(30)
+        .listen(listener)?
+        .run();
 
     // Does nothing until we call await
     Ok(server)

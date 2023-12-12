@@ -1,0 +1,19 @@
+@base_url = http://127.0.0.1:8000
+
+@user_id1 = xyz
+
+### Healthz
+GET {{base_url}}/healthz
+
+### Create User
+POST {{base_url}}/users
+Content-Type: application/json
+
+{
+    "email": "test@test.com",
+    "name": "Jeff Jeffries"
+}
+
+### Get User
+GET {{base_url}}/users/{{user_id1}}
+

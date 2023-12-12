@@ -27,7 +27,7 @@ pub(super) async fn healthz(_: HttpRequest) -> impl Responder {
     HttpResponse::Ok()
 }
 
-#[tracing::instrument(skip(svc))]
+//#[tracing::instrument(skip(svc))]
 pub(super) async fn post_user(
     svc: web::Data<Controller>,
     body: web::Bytes,
@@ -47,7 +47,7 @@ pub(super) async fn post_user(
     Ok(HttpResponse::Created().json(result))
 }
 
-#[tracing::instrument(skip(svc))]
+//#[tracing::instrument(skip(svc))]
 pub(super) async fn get_user(
     svc: web::Data<Controller>,
     req: HttpRequest,
@@ -60,7 +60,7 @@ pub(super) async fn get_user(
     Ok(HttpResponse::Ok().json(result))
 }
 
-#[tracing::instrument(skip(svc))]
+//#[tracing::instrument(skip(svc))]
 pub(super) async fn list_subscriptions_by_user(
     svc: web::Data<Controller>,
     req: HttpRequest,
@@ -73,7 +73,7 @@ pub(super) async fn list_subscriptions_by_user(
     Ok(HttpResponse::Ok().json(result))
 }
 
-#[tracing::instrument(skip(svc))]
+//#[tracing::instrument(skip(svc))]
 pub(super) async fn post_subscription(
     svc: web::Data<Controller>,
     body: web::Bytes,

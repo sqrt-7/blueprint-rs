@@ -12,6 +12,7 @@ fn main() {
     let config = Config::new_from_file("config.yaml")
         .unwrap_or_else(|err| panic!("failed to load config: {}", err));
 
+    println!("{:?}", config);
     run(config)
 }
 
@@ -42,17 +43,17 @@ fn run(config: Config) {
         .unwrap_or_else(|err| panic!("failed to build tokio runtime: {}", err));
 
     runtime.block_on(async {
-        let http_main = runtime.spawn(async {
-            tracing::info!("starting http server");
-            http_server.await
-        });
-        let grpc_main = runtime.spawn(async {
-            tracing::info!("starting grpc server");
-            grpc_server.await
-        });
+        // let http_main = runtime.spawn(http_server);
+        // println!("starting http server on port {}", config.http_port);
 
-        if let Err(e) = tokio::try_join!(http_main, grpc_main) {
-            tracing::error!("main thread error: {}", e);
+        // let grpc_main = runtime.spawn(grpc_server);
+        // println!("starting grpc server on port {}", config.grpc_port);
+
+        if let Err(e) = tokio::try_join!(
+            runtime.spawn(http_server),
+            runtime.spawn(grpc_server)
+        ) {
+            println!("main thread error: {}", e);
         }
     });
 
@@ -60,7 +61,7 @@ fn run(config: Config) {
 }
 
 fn cleanup() {
-    //tracing::info!("cleaning up");
+    println!("cleaning up");
     // todo
 }
 
