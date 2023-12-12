@@ -7,7 +7,6 @@ use actix_web::{
     web,
 };
 use actix_web_lab::middleware::{from_fn, Next};
-
 use std::{error::Error, net::TcpListener, sync::Arc};
 
 pub fn create_listener(port: u16) -> Result<TcpListener, Box<dyn Error>> {

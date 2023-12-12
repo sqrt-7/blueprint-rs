@@ -7,13 +7,13 @@ use tonic::{Request, Response, Status};
 
 #[derive(Debug)]
 pub struct Handler {
-    logic: Arc<logic::Controller>,
+    controller: Arc<logic::Controller>,
 }
 
 impl Handler {
-    pub fn new(logic: Arc<logic::Controller>) -> Self {
+    pub fn new(controller: Arc<logic::Controller>) -> Self {
         Handler {
-            logic,
+            controller,
         }
     }
 }
@@ -23,7 +23,7 @@ impl Handler {
     fn create_user_inner(&self, request: Request<proto::CreateUserRequest>) -> Result<Response<proto::User>, Status> {
         let request = request.into_inner();
 
-        match self.logic.create_user(logic::dto::CreateUserRequest {
+        match self.controller.create_user(logic::dto::CreateUserRequest {
             email: request.email,
             name: request.name,
         }) {
@@ -34,7 +34,7 @@ impl Handler {
 
     fn get_user_inner(&self, request: Request<String>) -> Result<Response<proto::User>, Status> {
         let request = request.into_inner();
-        match self.logic.get_user(&request) {
+        match self.controller.get_user(&request) {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }
@@ -42,7 +42,7 @@ impl Handler {
 
     fn create_journal_inner(&self, request: Request<proto::CreateJournalRequest>) -> Result<Response<proto::Journal>, Status> {
         let request = request.into_inner();
-        match self.logic.create_journal(logic::dto::CreateJournalRequest{ 
+        match self.controller.create_journal(logic::dto::CreateJournalRequest{ 
             title: request.title, 
             year: request.year,
          }) {
@@ -53,7 +53,7 @@ impl Handler {
 
     fn get_journal_inner(&self, request: Request<String>) -> Result<Response<proto::Journal>, Status> {
         let request = request.into_inner();
-        match self.logic.get_journal(&request) {
+        match self.controller.get_journal(&request) {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }
@@ -61,7 +61,7 @@ impl Handler {
 
     fn create_subscription_inner(&self, request: Request<proto::CreateSubscriptionRequest>) -> Result<Response<proto::Subscription>, Status> {
         let request = request.into_inner();
-        match self.logic.create_subscription(logic::dto::CreateSubscriptionRequest{
+        match self.controller.create_subscription(logic::dto::CreateSubscriptionRequest{
             user_id: request.user_id,
             journal_id: request.journal_id,
         }) {
@@ -72,7 +72,7 @@ impl Handler {
 
     fn list_subscriptions_for_user_inner(&self, request: Request<String>) -> Result<Response<proto::SubscriptionList>, Status> {
         let request = request.into_inner();
-        match self.logic.list_subscriptions_by_user(&request) {
+        match self.controller.list_subscriptions_by_user(&request) {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }

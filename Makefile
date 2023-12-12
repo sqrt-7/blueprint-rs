@@ -23,4 +23,4 @@ test:
 	cargo test -- --nocapture --test-threads 1
 
 grpcui:
-	grpcui -plaintext -v -proto blueprint.proto 127.0.0.1:9000
+	grpcui -plaintext -v -proto ./proto/blueprint.proto 127.0.0.1:9000

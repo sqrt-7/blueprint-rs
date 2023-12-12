@@ -206,8 +206,8 @@ impl From<Vec<Subscription>> for proto::SubscriptionList {
             items: Vec::new(),
         };
 
-        for val in val.into_iter() {
-            res.items.push(val.into());
+        for v in val.into_iter() {
+            res.items.push(v.into());
         }
 
         res
