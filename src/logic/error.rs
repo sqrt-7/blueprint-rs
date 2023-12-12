@@ -115,7 +115,11 @@ impl Debug for ServiceError {
 
 impl Display for ServiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ServiceError{{ type: {}, code: {} }}", self.error_type, self.code)
+        write!(
+            f,
+            "ServiceError{{ type: {}, code: {} }}",
+            self.error_type, self.code
+        )
     }
 }
 

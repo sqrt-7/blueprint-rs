@@ -80,9 +80,10 @@ impl Datastore for InMemDatastore {
                 Ok(item)
             },
 
-            None => {
-                Err(DatastoreError::new(format!("uuid: {}", uuid), DatastoreErrorType::NotFound))
-            },
+            None => Err(DatastoreError::new(
+                format!("uuid: {}", uuid),
+                DatastoreErrorType::NotFound,
+            )),
         }
     }
 
@@ -101,9 +102,10 @@ impl Datastore for InMemDatastore {
                 Ok(item)
             },
 
-            None => {
-                Err(DatastoreError::new(format!("uuid: {}", uuid), DatastoreErrorType::NotFound))
-            },
+            None => Err(DatastoreError::new(
+                format!("uuid: {}", uuid),
+                DatastoreErrorType::NotFound,
+            )),
         }
     }
 
@@ -121,8 +123,10 @@ impl Datastore for InMemDatastore {
                 v.push(to_add);
             }
         } else {
-            db.subs_index_user
-                .insert(sub.user_id().to_string(), Vec::from([sub.uuid().to_string()]));
+            db.subs_index_user.insert(
+                sub.user_id().to_string(),
+                Vec::from([sub.uuid().to_string()]),
+            );
         }
 
         // Add to journal index
@@ -132,8 +136,10 @@ impl Datastore for InMemDatastore {
                 v.push(to_add);
             }
         } else {
-            db.subs_index_journal
-                .insert(sub.journal_id().to_string(), Vec::from([sub.uuid().to_string()]));
+            db.subs_index_journal.insert(
+                sub.journal_id().to_string(),
+                Vec::from([sub.uuid().to_string()]),
+            );
         }
 
         Ok(())
@@ -214,12 +220,18 @@ mod tests {
         // Add invalid json
         {
             let mut lock = ds.users.lock().unwrap();
-            lock.insert(user_id.to_string(), "{\"hello\": \"world\"}".to_owned());
+            lock.insert(
+                user_id.to_string(),
+                "{\"hello\": \"world\"}".to_owned(),
+            );
         }
 
         let res = ds.get_user(&user_id).expect_err("should be error");
 
-        assert!(matches!(res.error_type, DatastoreErrorType::DataCorruption));
+        assert!(matches!(
+            res.error_type,
+            DatastoreErrorType::DataCorruption
+        ));
     }
 
     #[test]

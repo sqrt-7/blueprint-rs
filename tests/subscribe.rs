@@ -1,3 +1,4 @@
+#[rustfmt::skip]
 mod helpers;
 
 use actix_web::http;
@@ -35,7 +36,10 @@ async fn post_subscription_400_invalid_uuid() {
 
     assert_eq!(http::StatusCode::BAD_REQUEST, status_code);
     assert_eq!(err.code(), CODE_INVALID_UUID);
-    assert!(matches!(err.error_type(), ServiceErrorType::InvalidArgument));
+    assert!(matches!(
+        err.error_type(),
+        ServiceErrorType::InvalidArgument
+    ));
 }
 
 #[tokio::test]

@@ -1,3 +1,4 @@
+#[rustfmt::skip]
 mod helpers;
 
 use actix_web::http;

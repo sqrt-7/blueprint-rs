@@ -1,3 +1,4 @@
+#[rustfmt::skip]
 use std::sync::Arc;
 
 use blueprint::{datastore::inmem::InMemDatastore, logic::Controller, server::http};

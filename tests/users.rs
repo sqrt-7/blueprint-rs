@@ -1,3 +1,4 @@
+#[rustfmt::skip]
 use std::collections::HashMap;
 
 use actix_web::http;
@@ -60,7 +61,10 @@ async fn post_user_201_get_user_200() {
 
     assert_eq!(name, get_usr.name().to_string());
     assert_eq!(email, get_usr.email().to_string());
-    assert_eq!(created_usr.uuid().to_string(), get_usr.uuid().to_string());
+    assert_eq!(
+        created_usr.uuid().to_string(),
+        get_usr.uuid().to_string()
+    );
 }
 
 #[tokio::test]
@@ -86,7 +90,10 @@ async fn get_user_404() {
         .expect("failed to get payload");
 
     assert_eq!(err.code(), CODE_USER_NOT_FOUND);
-    assert!(matches!(err.error_type(), ServiceErrorType::NotFound));
+    assert!(matches!(
+        err.error_type(),
+        ServiceErrorType::NotFound
+    ));
 }
 
 #[tokio::test]

@@ -10,11 +10,23 @@ use actix_web::{
 };
 
 pub(super) fn endpoints(cfg: &mut ServiceConfig) {
-    cfg.route("/healthz", Route::new().method(Method::GET).to(healthz));
+    cfg.route(
+        "/healthz",
+        Route::new().method(Method::GET).to(healthz),
+    );
 
-    cfg.route("/users", Route::new().method(Method::POST).to(post_user));
-    cfg.route("/users/{uuid}", Route::new().method(Method::GET).to(get_user));
-    cfg.route("/subscriptions", Route::new().method(Method::POST).to(post_subscription));
+    cfg.route(
+        "/users",
+        Route::new().method(Method::POST).to(post_user),
+    );
+    cfg.route(
+        "/users/{uuid}",
+        Route::new().method(Method::GET).to(get_user),
+    );
+    cfg.route(
+        "/subscriptions",
+        Route::new().method(Method::POST).to(post_subscription),
+    );
     cfg.route(
         "/subscriptions/{user_id}",
         Route::new()
