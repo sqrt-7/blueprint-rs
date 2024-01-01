@@ -3,7 +3,10 @@ use actix_web::{
     http::{self, header::ContentType},
     HttpResponse, ResponseError,
 };
-use std::fmt::{Debug, Display};
+use std::{
+    error::Error,
+    fmt::{Debug, Display},
+};
 use tonic::{Code, Status};
 
 new_error_code!(UNEXPECTED_ERROR);
@@ -16,13 +19,16 @@ new_error_code!(JOURNAL_INVALID_DATA);
 new_error_code!(SUB_NOT_FOUND);
 new_error_code!(SUB_INVALID_DATA);
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct ServiceError {
     error_type: ServiceErrorType,
     code: String,
 
     #[serde(skip_serializing, skip_deserializing)]
     internal_msg: Option<String>,
+
+    #[serde(skip_serializing, skip_deserializing)]
+    wrapped: Option<Box<dyn Error>>, // wrapper error
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -41,10 +47,16 @@ impl ServiceError {
             error_type: ServiceErrorType::Internal,
             code: code.to_string(),
             internal_msg: None,
+            wrapped: None,
         }
     }
 
-    pub fn with_internal(mut self, internal_msg: String) -> Self {
+    pub fn wrap(mut self, prev: Box<dyn Error>) -> Self {
+        self.wrapped = Some(prev);
+        self
+    }
+
+    pub fn with_internal_msg(mut self, internal_msg: String) -> Self {
         self.internal_msg = Some(internal_msg);
         self
     }
@@ -103,16 +115,6 @@ impl From<ServiceError> for Status {
     }
 }
 
-impl Debug for ServiceError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "ServiceError{{ type: {}, code: {}, internal_msg: {:?} }}",
-            self.error_type, self.code, self.internal_msg
-        )
-    }
-}
-
 impl Display for ServiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -120,6 +122,12 @@ impl Display for ServiceError {
             "ServiceError{{ type: {}, code: {} }}",
             self.error_type, self.code
         )
+    }
+}
+
+impl Error for ServiceError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        self.wrapped.as_deref()
     }
 }
 

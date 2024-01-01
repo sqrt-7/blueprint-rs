@@ -10,7 +10,7 @@ async fn post_subscription_400_invalid_id() {
     let srv = helpers::spawn_app();
     let client = reqwest::Client::new();
 
-    let endpoint = format!("{}/subscriptions", srv.basepath);
+    let endpoint = format!("{}/api/v1/subscriptions", srv.basepath);
 
     let user_id = "blah";
     let journal_id = "blah2";

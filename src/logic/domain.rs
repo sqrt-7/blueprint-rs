@@ -20,7 +20,7 @@ impl TryFrom<&str> for ID {
             Ok(raw) => Ok(ID(raw.to_string())),
             Err(_) => Err(ServiceError::new(CODE_INVALID_ID)
                 .with_type(ServiceErrorType::InvalidArgument)
-                .with_internal(format!("invalid id: {}", value))),
+                .with_internal_msg(format!("invalid id: {}", value))),
         }
     }
 }

@@ -68,7 +68,13 @@ async fn custom_logger_mw(
         return resp_wrap;
     }
 
-    // let resp = resp_wrap.as_ref().unwrap();
+    let resp = resp_wrap.as_ref().unwrap();
+
+    if let Some(err) = resp.response().error() {
+        if let Some(svc_err) = err.as_error::<logic::error::ServiceError>() {
+            println!("{:?}", svc_err);
+        }
+    };
 
     // let mut builder = logging::new(logging::Level::Info, "http_response")
     //     .with_string("status", resp.status().to_string());

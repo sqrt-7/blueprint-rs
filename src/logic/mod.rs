@@ -47,7 +47,7 @@ impl Controller {
             Err(db_err) => match db_err.error_type {
                 DatastoreErrorType::NotFound => Err(ServiceError::new(CODE_USER_NOT_FOUND)
                     .with_type(ServiceErrorType::NotFound)
-                    .with_internal(format!("datastore: {}", db_err))),
+                    .wrap(Box::new(db_err))),
                 _ => Err(datastore_internal_error(db_err)),
             },
         }
@@ -74,7 +74,7 @@ impl Controller {
             Err(db_err) => match db_err.error_type {
                 DatastoreErrorType::NotFound => Err(ServiceError::new(CODE_JOURNAL_NOT_FOUND)
                     .with_type(ServiceErrorType::NotFound)
-                    .with_internal(format!("datastore: {}", db_err))),
+                    .wrap(Box::new(db_err))),
                 _ => Err(datastore_internal_error(db_err)),
             },
         }
@@ -99,7 +99,10 @@ impl Controller {
 
     pub fn list_subscriptions_by_user(&self, user_id: &str) -> Result<Vec<domain::Subscription>> {
         let user_id = ID::try_from(user_id)?;
-        match self.datastore.list_subscriptions_by_user(&user_id) {
+        match self
+            .datastore
+            .list_subscriptions_by_user(&user_id)
+        {
             Ok(res) => Ok(res),
             Err(db_err) => Err(datastore_internal_error(db_err)),
         }
@@ -119,5 +122,5 @@ impl core::fmt::Debug for Controller {
 fn datastore_internal_error(db_err: DatastoreError) -> ServiceError {
     ServiceError::new(CODE_DB_ERROR)
         .with_type(ServiceErrorType::Internal)
-        .with_internal(format!("datastore: {}", db_err))
+        .wrap(Box::new(db_err))
 }

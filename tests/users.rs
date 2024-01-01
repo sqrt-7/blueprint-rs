@@ -19,7 +19,7 @@ async fn post_user_201_get_user_200() {
     let name = "Jeff Jefferson";
 
     let created_usr: User = {
-        let endpoint = format!("{}/users", srv.basepath);
+        let endpoint = format!("{}/api/v1/users", srv.basepath);
 
         let mut req = HashMap::new();
         req.insert("email", email);
@@ -35,7 +35,10 @@ async fn post_user_201_get_user_200() {
         let status_code = resp.status();
         assert_eq!(http::StatusCode::CREATED, status_code);
 
-        let text = resp.text().await.expect("failed to get payload");
+        let text = resp
+            .text()
+            .await
+            .expect("failed to get payload");
         serde_json::from_str(&text).expect("failed to parse json payload")
     };
 
@@ -44,7 +47,11 @@ async fn post_user_201_get_user_200() {
     assert!(created_usr.id().to_string().len() == 36);
 
     let get_usr: User = {
-        let endpoint = format!("{}/users/{}", srv.basepath, created_usr.id());
+        let endpoint = format!(
+            "{}/api/v1/users/{}",
+            srv.basepath,
+            created_usr.id()
+        );
 
         let resp = client
             .get(endpoint)
@@ -55,7 +62,10 @@ async fn post_user_201_get_user_200() {
         let status_code = resp.status();
         assert_eq!(http::StatusCode::OK, status_code);
 
-        let text = resp.text().await.expect("failed to get payload");
+        let text = resp
+            .text()
+            .await
+            .expect("failed to get payload");
         serde_json::from_str(&text).expect("failed to parse json payload")
     };
 
@@ -73,7 +83,7 @@ async fn get_user_404() {
     let client = reqwest::Client::new();
 
     let id = ID::new().to_string();
-    let endpoint = format!("{}/users/{}", srv.basepath, id);
+    let endpoint = format!("{}/api/v1/users/{}", srv.basepath, id);
 
     let resp = client
         .get(endpoint)

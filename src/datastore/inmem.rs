@@ -114,10 +114,14 @@ impl Datastore for InMemDatastore {
         let data = InMemDatastore::to_json(sub)?;
 
         // Add to db
-        db.subs_db.insert(sub.id().to_string(), data);
+        db.subs_db
+            .insert(sub.id().to_string(), data);
 
         // Add to user index
-        if let Some(v) = db.subs_index_user.get_mut(&sub.user_id().to_string()) {
+        if let Some(v) = db
+            .subs_index_user
+            .get_mut(&sub.user_id().to_string())
+        {
             let to_add = sub.id().to_string();
             if !v.contains(&to_add) {
                 v.push(to_add);
@@ -130,7 +134,10 @@ impl Datastore for InMemDatastore {
         }
 
         // Add to journal index
-        if let Some(v) = db.subs_index_journal.get_mut(&sub.journal_id().to_string()) {
+        if let Some(v) = db
+            .subs_index_journal
+            .get_mut(&sub.journal_id().to_string())
+        {
             let to_add = sub.id().to_string();
             if !v.contains(&to_add) {
                 v.push(to_add);
@@ -152,7 +159,10 @@ impl Datastore for InMemDatastore {
         let db = self.subs.lock().unwrap();
 
         let mut found = Vec::new();
-        if let Some(sub_ids) = db.subs_index_user.get(&user_id.to_string()) {
+        if let Some(sub_ids) = db
+            .subs_index_user
+            .get(&user_id.to_string())
+        {
             for sid in sub_ids {
                 let entry = db.subs_db.get(sid);
                 if entry.is_none() {
@@ -226,7 +236,9 @@ mod tests {
             );
         }
 
-        let res = ds.get_user(&user_id).expect_err("should be error");
+        let res = ds
+            .get_user(&user_id)
+            .expect_err("should be error");
 
         assert!(matches!(
             res.error_type,
@@ -259,7 +271,9 @@ mod tests {
         ds.store_subscription(&sub6).unwrap();
 
         {
-            let res = ds.list_subscriptions_by_user(&user1).unwrap();
+            let res = ds
+                .list_subscriptions_by_user(&user1)
+                .unwrap();
 
             assert!(res.len() == 3);
             assert!(res.contains(&sub1));
@@ -268,7 +282,9 @@ mod tests {
         }
 
         {
-            let res = ds.list_subscriptions_by_user(&user2).unwrap();
+            let res = ds
+                .list_subscriptions_by_user(&user2)
+                .unwrap();
 
             assert!(res.len() == 3);
             assert!(res.contains(&sub4));
@@ -278,7 +294,9 @@ mod tests {
 
         {
             let some_fake_id = domain::ID::new();
-            let res = ds.list_subscriptions_by_user(&some_fake_id).unwrap();
+            let res = ds
+                .list_subscriptions_by_user(&some_fake_id)
+                .unwrap();
             assert!(res.len() == 0);
         }
     }
