@@ -45,9 +45,11 @@ impl Controller {
         match self.datastore.get_user(&id) {
             Ok(obj) => Ok(obj),
             Err(db_err) => match db_err.error_type {
-                DatastoreErrorType::NotFound => Err(ServiceError::new(CODE_USER_NOT_FOUND)
-                    .with_type(ServiceErrorType::NotFound)
-                    .wrap(Box::new(db_err))),
+                DatastoreErrorType::NotFound => {
+                    Err(ServiceError::new(ServiceErrorCode::UserNotFound)
+                        .with_type(ServiceErrorType::NotFound)
+                        .wrap(Box::new(db_err)))
+                },
                 _ => Err(datastore_internal_error(db_err)),
             },
         }
@@ -72,9 +74,11 @@ impl Controller {
         match self.datastore.get_journal(&id) {
             Ok(obj) => Ok(obj),
             Err(db_err) => match db_err.error_type {
-                DatastoreErrorType::NotFound => Err(ServiceError::new(CODE_JOURNAL_NOT_FOUND)
-                    .with_type(ServiceErrorType::NotFound)
-                    .wrap(Box::new(db_err))),
+                DatastoreErrorType::NotFound => Err(ServiceError::new(
+                    ServiceErrorCode::JournalNotFound,
+                )
+                .with_type(ServiceErrorType::NotFound)
+                .wrap(Box::new(db_err))),
                 _ => Err(datastore_internal_error(db_err)),
             },
         }
@@ -120,7 +124,7 @@ impl core::fmt::Debug for Controller {
 // -----------------------
 
 fn datastore_internal_error(db_err: DatastoreError) -> ServiceError {
-    ServiceError::new(CODE_DB_ERROR)
+    ServiceError::new(ServiceErrorCode::UnexpectedError)
         .with_type(ServiceErrorType::Internal)
         .wrap(Box::new(db_err))
 }

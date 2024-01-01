@@ -174,12 +174,12 @@ impl Config {
 
 // new_error_code!(FOO) =>
 // pub const CODE_FOO: &str = "FOO";
-macro_rules! new_error_code {
-    ($code:ident) => {
-        paste::paste! {
-            pub const [<CODE_ $code>]: &str = stringify!($code);
-        }
-    };
-}
+// macro_rules! new_error_code {
+//     ($code:ident) => {
+//         paste::paste! {
+//             pub const [<CODE_ $code>]: &str = stringify!($code);
+//         }
+//     };
+// }
 
-pub(crate) use new_error_code;
+// pub(crate) use new_error_code;

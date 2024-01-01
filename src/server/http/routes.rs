@@ -1,6 +1,6 @@
 use crate::logic::{
     dto,
-    error::{ServiceError, ServiceErrorType, CODE_SUB_INVALID_DATA, CODE_USER_INVALID_DATA},
+    error::{ServiceError, ServiceErrorCode, ServiceErrorType},
     Controller,
 };
 use actix_web::{
@@ -67,9 +67,11 @@ pub(super) async fn post_user(svc: web::Data<Controller>, body: web::Bytes) -> H
     let data = serde_json::from_slice::<dto::CreateUserRequest>(&body);
 
     if let Err(json_err) = data {
-        return Err(ServiceError::new(CODE_USER_INVALID_DATA)
-            .with_type(ServiceErrorType::InvalidArgument)
-            .with_internal_msg(format!("request json parse: {}", json_err)));
+        return Err(
+            ServiceError::new(ServiceErrorCode::UserInvalidData)
+                .with_type(ServiceErrorType::InvalidArgument)
+                .wrap(Box::new(json_err)),
+        );
     }
 
     let data = data.unwrap();
@@ -107,9 +109,11 @@ pub(super) async fn post_subscription(svc: web::Data<Controller>, body: web::Byt
     let data = serde_json::from_slice::<dto::CreateSubscriptionRequest>(&body);
 
     if let Err(json_err) = data {
-        return Err(ServiceError::new(CODE_SUB_INVALID_DATA)
-            .with_type(ServiceErrorType::InvalidArgument)
-            .with_internal_msg(format!("request json parse: {}", json_err)));
+        return Err(
+            ServiceError::new(ServiceErrorCode::SubscriptionInvalidData)
+                .with_type(ServiceErrorType::InvalidArgument)
+                .wrap(Box::new(json_err)),
+        );
     }
 
     let data = data.unwrap();

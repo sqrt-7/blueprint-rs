@@ -1,4 +1,3 @@
-use crate::new_error_code;
 use actix_web::{
     http::{self, header::ContentType},
     HttpResponse, ResponseError,
@@ -9,26 +8,28 @@ use std::{
 };
 use tonic::{Code, Status};
 
-new_error_code!(UNEXPECTED_ERROR);
-new_error_code!(DB_ERROR);
-new_error_code!(INVALID_ID);
-new_error_code!(USER_NOT_FOUND);
-new_error_code!(USER_INVALID_DATA);
-new_error_code!(JOURNAL_NOT_FOUND);
-new_error_code!(JOURNAL_INVALID_DATA);
-new_error_code!(SUB_NOT_FOUND);
-new_error_code!(SUB_INVALID_DATA);
-
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct ServiceError {
     error_type: ServiceErrorType,
-    code: String,
+    code: ServiceErrorCode,
 
     #[serde(skip_serializing, skip_deserializing)]
     internal_msg: Option<String>,
 
     #[serde(skip_serializing, skip_deserializing)]
     wrapped: Option<Box<dyn Error>>, // wrapper error
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub enum ServiceErrorCode {
+    UnexpectedError,
+    InvalidID,
+    UserNotFound,
+    UserInvalidData,
+    JournalNotFound,
+    JournalInvalidData,
+    SubscriptionNotFound,
+    SubscriptionInvalidData,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -42,10 +43,10 @@ pub enum ServiceErrorType {
 }
 
 impl ServiceError {
-    pub fn new(code: &str) -> Self {
+    pub fn new(code: ServiceErrorCode) -> Self {
         ServiceError {
             error_type: ServiceErrorType::Internal,
-            code: code.to_string(),
+            code,
             internal_msg: None,
             wrapped: None,
         }
@@ -70,8 +71,8 @@ impl ServiceError {
         self.error_type.clone()
     }
 
-    pub fn code(&self) -> &String {
-        &self.code
+    pub fn code(&self) -> ServiceErrorCode {
+        self.code.clone()
     }
 
     pub fn internal_msg(&self) -> &Option<String> {
@@ -134,5 +135,17 @@ impl Error for ServiceError {
 impl Display for ServiceErrorType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
+    }
+}
+
+impl Display for ServiceErrorCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl From<ServiceErrorCode> for String {
+    fn from(value: ServiceErrorCode) -> Self {
+        format!("{:?}", value)
     }
 }

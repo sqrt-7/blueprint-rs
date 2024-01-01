@@ -1,4 +1,4 @@
-use super::error::{ServiceError, ServiceErrorType, CODE_INVALID_ID};
+use super::error::{ServiceError, ServiceErrorCode, ServiceErrorType};
 use crate::proto;
 use std::fmt::Display;
 use uuid::Uuid as uuid_bytes;
@@ -18,7 +18,7 @@ impl TryFrom<&str> for ID {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match uuid_bytes::parse_str(value) {
             Ok(raw) => Ok(ID(raw.to_string())),
-            Err(_) => Err(ServiceError::new(CODE_INVALID_ID)
+            Err(_) => Err(ServiceError::new(ServiceErrorCode::InvalidID)
                 .with_type(ServiceErrorType::InvalidArgument)
                 .with_internal_msg(format!("invalid id: {}", value))),
         }
