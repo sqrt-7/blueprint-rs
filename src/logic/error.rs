@@ -17,7 +17,7 @@ pub struct ServiceError {
     internal_msg: Option<String>,
 
     #[serde(skip_serializing, skip_deserializing)]
-    wrapped: Option<Box<dyn Error>>, // wrapper error
+    wrapped: Option<Box<dyn Error>>, // wrapped error
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]

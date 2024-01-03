@@ -29,7 +29,7 @@ fn run(config: Config) {
     // HTTP SERVER
     let http_listener = http::create_listener(config.http_port)
         .unwrap_or_else(|err| panic!("failed to init http listener: {}", err));
-    let http_server = http::init(http_listener, ctrl.clone())
+    let http_server = http::init(http_listener, Arc::clone(&ctrl))
         .unwrap_or_else(|err| panic!("failed to init http server: {}", err));
 
     // GRPC SERVER
@@ -43,12 +43,6 @@ fn run(config: Config) {
         .unwrap_or_else(|err| panic!("failed to build tokio runtime: {}", err));
 
     runtime.block_on(async {
-        // let http_main = runtime.spawn(http_server);
-        // println!("starting http server on port {}", config.http_port);
-
-        // let grpc_main = runtime.spawn(grpc_server);
-        // println!("starting grpc server on port {}", config.grpc_port);
-
         if let Err(e) = tokio::try_join!(
             runtime.spawn(http_server),
             runtime.spawn(grpc_server)
