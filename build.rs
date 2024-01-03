@@ -5,7 +5,7 @@ fn main() -> Result<()> {
     tonic_build::configure()
         .build_server(true)
         .build_client(false)
-        .out_dir("src/proto")
+        .out_dir("proto")
         .compile(&["proto/blueprint.proto"], &["proto/"])?;
 
     Ok(())

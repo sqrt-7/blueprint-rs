@@ -20,7 +20,7 @@ check-audit:
 check: check-cargo check-lint check-format check-audit
 
 build:
-	cargo build --verbose
+	cargo build
 
 test:
 	cargo test -- --nocapture --test-threads 1

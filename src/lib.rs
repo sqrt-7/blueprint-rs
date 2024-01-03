@@ -3,8 +3,12 @@
 
 pub mod datastore;
 pub mod logic;
-pub mod proto;
 pub mod server;
+
+// Import proto generated files
+pub mod proto {
+    include!("../proto/blueprint.rs");
+}
 
 // CONFIG ---------------------------
 
