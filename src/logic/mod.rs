@@ -27,6 +27,7 @@ impl Controller {
     // -----------------------
 
     pub fn create_user(&self, data: dto::CreateUserRequest) -> Result<domain::User> {
+        log::info!("helllo");
         let new_id = ID::new();
         let email = Email::try_from(data.email)?;
         let name = UserName::try_from(data.name)?;
@@ -48,7 +49,7 @@ impl Controller {
                 DatastoreErrorType::NotFound => {
                     Err(ServiceError::new(ServiceErrorCode::UserNotFound)
                         .with_type(ServiceErrorType::NotFound)
-                        .wrap(Box::new(db_err)))
+                        .wrap(db_err))
                 },
                 _ => Err(datastore_internal_error(db_err)),
             },
@@ -78,7 +79,7 @@ impl Controller {
                     ServiceErrorCode::JournalNotFound,
                 )
                 .with_type(ServiceErrorType::NotFound)
-                .wrap(Box::new(db_err))),
+                .wrap(db_err)),
                 _ => Err(datastore_internal_error(db_err)),
             },
         }
@@ -126,5 +127,5 @@ impl core::fmt::Debug for Controller {
 fn datastore_internal_error(db_err: DatastoreError) -> ServiceError {
     ServiceError::new(ServiceErrorCode::UnexpectedError)
         .with_type(ServiceErrorType::Internal)
-        .wrap(Box::new(db_err))
+        .wrap(db_err)
 }

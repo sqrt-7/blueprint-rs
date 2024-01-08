@@ -5,7 +5,6 @@ use blueprint::{
     Config,
 };
 use std::sync::Arc;
-//use tracing_subscriber::prelude::*;
 
 fn main() {
     // CONFIG
@@ -18,7 +17,7 @@ fn main() {
 
 fn run(config: Config) {
     // TRACING
-    //init_tracing();
+    init_tracing();
 
     // DB
     let datastore = Arc::new(InMemDatastore::new());
@@ -59,16 +58,7 @@ fn cleanup() {
     // todo
 }
 
-// fn init_tracing() {
-//     // OpenTelemetry pipeline (turned off for now)
-//     // otel_stdout::new_pipeline()
-//     //     .with_trace_config(otel_trace::config().with_sampler(otel_trace::Sampler::AlwaysOff))
-//     //     .install_simple()
-
-//     // let my_subscriber = blueprint::tracing_json::JsonLogSubscriber::new();
-//     // tracing::subscriber::set_global_default(my_subscriber).expect("setting tracing default failed");
-
-//     // tracing_subscriber::registry()
-//     //     .with(blueprint::tracing_json::JsonLogSubscriber::new())
-//     //     .init();
-// }
+fn init_tracing() {
+    //tracing_subscriber::fmt().json().init();
+    //tracing::dispatcher::set_global_default(dispatcher)
+}

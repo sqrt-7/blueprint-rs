@@ -38,148 +38,73 @@ impl Config {
     }
 }
 
-// pub mod tracing_json {
+pub mod bplog {
+    pub struct JsonLogger {}
 
-//     pub struct JsonLogSubscriber {}
+    impl log::Log for JsonLogger {
+        fn enabled(&self, _: &log::Metadata) -> bool {
+            true
+        }
 
-//     struct JsonLogEntry {
-//         level: tracing::Level,
-//         span_id: String,
-//         path: String,
-//     }
+        fn log(&self, record: &log::Record) {
+            let entry: LogEntry = record.into();
+            let js = serde_json::to_string(&entry)
+                .unwrap_or_else(|err| format!("log entry failed: {:?}", err));
+            println!("{}", js);
+        }
 
-//     impl JsonLogSubscriber {
-//         pub fn new() -> Self {
-//             JsonLogSubscriber {}
-//         }
-//     }
+        fn flush(&self) {}
+    }
 
-//     impl JsonLogSubscriber {
-//         fn write_log() {}
-//     }
+    #[derive(serde::Serialize, Debug)]
+    enum Level {
+        #[serde(rename = "debug")]
+        Debug,
+        #[serde(rename = "info")]
+        Info,
+        #[serde(rename = "warn")]
+        Warn,
+        #[serde(rename = "error")]
+        Error,
+    }
 
-//     impl<S> tracing_subscriber::Layer<S> for JsonLogSubscriber
-//     where
-//         S: tracing::Subscriber,
-//     {
-//         fn max_level_hint(&self) -> Option<tracing::metadata::LevelFilter> {
-//             Some(tracing::metadata::LevelFilter::from_level(tracing::Level::INFO))
-//         }
+    impl From<log::Level> for Level {
+        fn from(value: log::Level) -> Self {
+            match value {
+                log::Level::Error => Level::Error,
+                log::Level::Warn => Level::Warn,
+                log::Level::Info => Level::Info,
+                log::Level::Debug => Level::Debug,
+                log::Level::Trace => Level::Debug,
+            }
+        }
+    }
 
-//         fn on_new_span(
-//             &self,
-//             attrs: &tracing::span::Attributes<'_>,
-//             id: &tracing::span::Id,
-//             ctx: tracing_subscriber::layer::Context<'_, S>,
-//         ) {
-//             let _ = (attrs, id, ctx);
-//         }
+    #[derive(serde::Serialize, Debug)]
+    struct LogEntry {
+        level: Level,
+        path: String,
+        line: String,
+        msg: String,
+    }
 
-//         fn on_record(
-//             &self,
-//             _span: &tracing::span::Id,
-//             _values: &tracing::span::Record<'_>,
-//             _ctx: tracing_subscriber::layer::Context<'_, S>,
-//         ) {
-//         }
+    impl From<&log::Record<'_>> for LogEntry {
+        fn from(record: &log::Record) -> Self {
+            let file_line: String = format!(
+                "{}:{}",
+                record.file().unwrap_or_default(),
+                record.line().unwrap_or_default()
+            );
 
-//         fn on_follows_from(
-//             &self,
-//             _span: &tracing::span::Id,
-//             _follows: &tracing::span::Id,
-//             _ctx: tracing_subscriber::layer::Context<'_, S>,
-//         ) {
-//         }
-
-//         fn on_event(
-//             &self,
-//             _event: &tracing::Event<'_>,
-//             _ctx: tracing_subscriber::layer::Context<'_, S>,
-//         ) {
-//         }
-
-//         fn on_enter(
-//             &self,
-//             _id: &tracing::span::Id,
-//             _ctx: tracing_subscriber::layer::Context<'_, S>,
-//         ) {
-//         }
-
-//         fn on_exit(
-//             &self,
-//             _id: &tracing::span::Id,
-//             _ctx: tracing_subscriber::layer::Context<'_, S>,
-//         ) {
-//         }
-
-//         fn on_close(
-//             &self,
-//             _id: tracing::span::Id,
-//             _ctx: tracing_subscriber::layer::Context<'_, S>,
-//         ) {
-//         }
-
-//         fn on_id_change(
-//             &self,
-//             _old: &tracing::span::Id,
-//             _new: &tracing::span::Id,
-//             _ctx: tracing_subscriber::layer::Context<'_, S>,
-//         ) {
-//         }
-//     }
-
-// impl tracing::Subscriber for JsonLogSubscriber {
-//     // This is only called once per callsite
-//     fn enabled(&self, _: &tracing::Metadata<'_>) -> bool {
-//         true
-//     }
-
-//     // Determines the ID of a new span
-//     fn new_span(&self, _: &tracing::span::Attributes<'_>) -> tracing::span::Id {
-//         let mut rng = rand::thread_rng();
-//         let mut num = 0u64;
-
-//         while num == 0 {
-//             num = rng.gen();
-//         }
-
-//         tracing::span::Id::from_u64(num)
-//     }
-
-//     fn record(&self, span: &tracing::span::Id, values: &tracing::span::Record<'_>) {
-//         println!("[RECORD] {:?} | {:?}", span, values);
-//     }
-
-//     fn record_follows_from(&self, span: &tracing::span::Id, follows: &tracing::span::Id) {
-//         println!("[RECORD_FOLLOWS] {:?} | {:?}", span, follows);
-//     }
-
-//     fn event(&self, event: &tracing::Event<'_>) {
-//         println!("[EVENT] {:?}", event);
-//     }
-
-//     fn enter(&self, span: &tracing::span::Id) {
-//         println!("[ENTER] {:?}", span);
-//     }
-
-//     fn exit(&self, span: &tracing::span::Id) {
-//         println!("[EXIT] {:?}", span);
-//     }
-
-//     fn max_level_hint(&self) -> Option<tracing::metadata::LevelFilter> {
-//         Some(tracing::metadata::LevelFilter::from_level(tracing::Level::INFO))
-//     }
-// }
-//}
-
-// new_error_code!(FOO) =>
-// pub const CODE_FOO: &str = "FOO";
-// macro_rules! new_error_code {
-//     ($code:ident) => {
-//         paste::paste! {
-//             pub const [<CODE_ $code>]: &str = stringify!($code);
-//         }
-//     };
-// }
-
-// pub(crate) use new_error_code;
+            LogEntry {
+                level: record.level().into(),
+                path: record
+                    .module_path()
+                    .unwrap_or_default()
+                    .to_string(),
+                line: file_line,
+                msg: format!("{}", record.args()),
+            }
+        }
+    }
+}

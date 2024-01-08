@@ -13,8 +13,8 @@ pub fn init(
     let addr = format!("127.0.0.1:{}", port);
     let addr: SocketAddr = addr.parse()?;
 
-    // Handler implements blueprint_server::Blueprint
-    let handler = handler::Handler::new(controller);
+    // blueprint_server implementation
+    let handler = handler::BlueprintServerImpl::new(controller);
 
     let svr = BlueprintServer::with_interceptor(handler, intercept_logger);
 

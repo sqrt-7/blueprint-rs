@@ -62,7 +62,6 @@ pub(super) async fn healthz() -> impl Responder {
     HttpResponse::Ok()
 }
 
-//#[tracing::instrument(skip(svc))]
 pub(super) async fn post_user(svc: web::Data<Controller>, body: web::Bytes) -> HttpResult {
     let data = serde_json::from_slice::<dto::CreateUserRequest>(&body);
 
@@ -70,7 +69,7 @@ pub(super) async fn post_user(svc: web::Data<Controller>, body: web::Bytes) -> H
         return Err(
             ServiceError::new(ServiceErrorCode::UserInvalidData)
                 .with_type(ServiceErrorType::InvalidArgument)
-                .wrap(Box::new(json_err)),
+                .wrap(json_err),
         );
     }
 
@@ -81,7 +80,6 @@ pub(super) async fn post_user(svc: web::Data<Controller>, body: web::Bytes) -> H
     Ok(HttpResponse::Created().json(result))
 }
 
-//#[tracing::instrument(skip(svc))]
 pub(super) async fn get_user(svc: web::Data<Controller>, req: HttpRequest) -> HttpResult {
     let id = req.match_info().get("id").unwrap();
 
@@ -91,7 +89,6 @@ pub(super) async fn get_user(svc: web::Data<Controller>, req: HttpRequest) -> Ht
     Ok(HttpResponse::Ok().json(result))
 }
 
-//#[tracing::instrument(skip(svc))]
 pub(super) async fn list_subscriptions_by_user(
     svc: web::Data<Controller>,
     req: HttpRequest,
@@ -104,7 +101,6 @@ pub(super) async fn list_subscriptions_by_user(
     Ok(HttpResponse::Ok().json(result))
 }
 
-//#[tracing::instrument(skip(svc))]
 pub(super) async fn post_subscription(svc: web::Data<Controller>, body: web::Bytes) -> HttpResult {
     let data = serde_json::from_slice::<dto::CreateSubscriptionRequest>(&body);
 
@@ -112,7 +108,7 @@ pub(super) async fn post_subscription(svc: web::Data<Controller>, body: web::Byt
         return Err(
             ServiceError::new(ServiceErrorCode::SubscriptionInvalidData)
                 .with_type(ServiceErrorType::InvalidArgument)
-                .wrap(Box::new(json_err)),
+                .wrap(json_err),
         );
     }
 

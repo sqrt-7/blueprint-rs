@@ -1,7 +1,10 @@
+use std::sync;
 #[rustfmt::skip]
 use std::sync::Arc;
 
-use blueprint::{datastore::inmem::InMemDatastore, logic::Controller, server::http};
+use blueprint::{
+    bplog::JsonLogger, datastore::inmem::InMemDatastore, logic::Controller, server::http,
+};
 
 pub struct TestServer {
     pub basepath: String,
@@ -15,9 +18,17 @@ impl TestServer {
     }
 }
 
-//static LOG_INIT: sync::Once = sync::Once::new();
+static LOG_INIT: sync::Once = sync::Once::new();
 
 pub fn spawn_app() -> TestServer {
+    LOG_INIT.call_once(|| {
+        let logger = JsonLogger {};
+        log::set_boxed_logger(Box::new(logger)).unwrap_or_else(|err| {
+            panic!("failed to set logger: {:?}", err);
+        });
+        log::set_max_level(log::LevelFilter::Info);
+    });
+
     // LOG_INIT.call_once(|| {
     //     env_logger::builder()
     //         .parse_default_env()

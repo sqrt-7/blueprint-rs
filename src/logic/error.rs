@@ -13,10 +13,10 @@ pub struct ServiceError {
     error_type: ServiceErrorType,
     code: ServiceErrorCode,
 
-    #[serde(skip_serializing, skip_deserializing)]
+    #[serde(skip)]
     internal_msg: Option<String>,
 
-    #[serde(skip_serializing, skip_deserializing)]
+    #[serde(skip)]
     wrapped: Option<Box<dyn Error>>, // wrapped error
 }
 
@@ -52,8 +52,8 @@ impl ServiceError {
         }
     }
 
-    pub fn wrap(mut self, prev: Box<dyn Error>) -> Self {
-        self.wrapped = Some(prev);
+    pub fn wrap(mut self, prev: impl Error + 'static) -> Self {
+        self.wrapped = Some(Box::new(prev));
         self
     }
 

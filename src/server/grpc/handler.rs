@@ -1,26 +1,31 @@
 use crate::{
     logic,
-    proto::{self, blueprint_server::Blueprint},
+    proto::{self, blueprint_server},
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 #[derive(Debug)]
-pub struct Handler {
+pub struct BlueprintServerImpl {
     controller: Arc<logic::Controller>,
 }
 
-impl Handler {
+impl BlueprintServerImpl {
     pub fn new(controller: Arc<logic::Controller>) -> Self {
-        Handler {
+        BlueprintServerImpl {
             controller,
         }
     }
 }
 
 #[rustfmt::skip]
-impl Handler {
-    fn create_user_inner(&self, request: Request<proto::CreateUserRequest>) -> Result<Response<proto::User>, Status> {
+impl BlueprintServerImpl {}
+
+// async_trait macro is a workaround until native `async trait` becomes stable
+#[rustfmt::skip]
+#[tonic::async_trait]
+impl blueprint_server::Blueprint for BlueprintServerImpl {
+    async fn create_user(&self, request: Request<proto::CreateUserRequest>) -> Result<Response<proto::User>, Status> {
         let request = request.into_inner();
 
         match self.controller.create_user(logic::dto::CreateUserRequest {
@@ -32,7 +37,7 @@ impl Handler {
         }
     }
 
-    fn get_user_inner(&self, request: Request<String>) -> Result<Response<proto::User>, Status> {
+    async fn get_user(&self, request: Request<String>) -> Result<Response<proto::User>, Status> {
         let request = request.into_inner();
         match self.controller.get_user(&request) {
             Ok(obj) => Ok(Response::new(obj.into())),
@@ -40,7 +45,7 @@ impl Handler {
         }
     }
 
-    fn create_journal_inner(&self, request: Request<proto::CreateJournalRequest>) -> Result<Response<proto::Journal>, Status> {
+    async fn create_journal(&self, request: Request<proto::CreateJournalRequest>) -> Result<Response<proto::Journal>, Status> {
         let request = request.into_inner();
         match self.controller.create_journal(logic::dto::CreateJournalRequest{ 
             title: request.title, 
@@ -51,7 +56,7 @@ impl Handler {
         }
     }
 
-    fn get_journal_inner(&self, request: Request<String>) -> Result<Response<proto::Journal>, Status> {
+    async fn get_journal(&self, request: Request<String>) -> Result<Response<proto::Journal>, Status> {
         let request = request.into_inner();
         match self.controller.get_journal(&request) {
             Ok(obj) => Ok(Response::new(obj.into())),
@@ -59,7 +64,7 @@ impl Handler {
         }
     }
 
-    fn create_subscription_inner(&self, request: Request<proto::CreateSubscriptionRequest>) -> Result<Response<proto::Subscription>, Status> {
+    async fn create_subscription(&self, request: Request<proto::CreateSubscriptionRequest>) -> Result<Response<proto::Subscription>, Status> {
         let request = request.into_inner();
         match self.controller.create_subscription(logic::dto::CreateSubscriptionRequest{
             user_id: request.user_id,
@@ -70,41 +75,11 @@ impl Handler {
         }
     }
 
-    fn list_subscriptions_for_user_inner(&self, request: Request<String>) -> Result<Response<proto::SubscriptionList>, Status> {
+    async fn list_subscriptions_for_user(&self, request: Request<String>) -> Result<Response<proto::SubscriptionList>, Status> {
         let request = request.into_inner();
         match self.controller.list_subscriptions_by_user(&request) {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }
-    }
-}
-
-// async_trait macro is a workaround until native `async trait` becomes stable
-// (it completely breaks my rust-analyzer so moved the actual code into *_inner functions)
-#[rustfmt::skip]
-#[tonic::async_trait]
-impl Blueprint for Handler {
-    async fn create_user(&self, request: Request<proto::CreateUserRequest>) -> Result<Response<proto::User>, Status> {
-        self.create_user_inner(request)
-    }
-
-    async fn get_user(&self, request: Request<String>) -> Result<Response<proto::User>, Status> {
-        self.get_user_inner(request)
-    }
-
-    async fn create_journal(&self, request: Request<proto::CreateJournalRequest>) -> Result<Response<proto::Journal>, Status> {
-        self.create_journal_inner(request)
-    }
-
-    async fn get_journal(&self, request: Request<String>) -> Result<Response<proto::Journal>, Status> {
-        self.get_journal_inner(request)
-    }
-
-    async fn create_subscription(&self, request: Request<proto::CreateSubscriptionRequest>) -> Result<Response<proto::Subscription>, Status> {
-        self.create_subscription_inner(request)
-    }
-
-    async fn list_subscriptions_for_user(&self, request: Request<String>) -> Result<Response<proto::SubscriptionList>, Status> {
-        self.list_subscriptions_for_user_inner(request)
     }
 }
