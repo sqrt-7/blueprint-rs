@@ -11,13 +11,13 @@ use std::{result, sync::Arc};
 
 pub type Result<T> = result::Result<T, ServiceError>;
 
-pub struct Controller {
+pub struct Logic {
     datastore: Arc<dyn Datastore + Send + Sync>,
 }
 
-impl Controller {
+impl Logic {
     pub fn new(datastore: Arc<dyn Datastore + Send + Sync>) -> Self {
-        Controller {
+        Self {
             datastore,
         }
     }
@@ -114,9 +114,9 @@ impl Controller {
     }
 }
 
-impl core::fmt::Debug for Controller {
+impl core::fmt::Debug for Logic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "logic::Controller",)
+        write!(f, "logic::Logic",)
     }
 }
 

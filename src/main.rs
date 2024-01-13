@@ -1,6 +1,6 @@
 use blueprint::{
     datastore::inmem::InMemDatastore,
-    logic::Controller,
+    logic::Logic,
     server::{grpc, http},
     Config,
 };
@@ -22,17 +22,17 @@ fn run(config: Config) {
     // DB
     let datastore = Arc::new(InMemDatastore::new());
 
-    // CONTROLLER
-    let ctrl = Arc::new(Controller::new(datastore));
+    // LOGIC CONTROLLER
+    let logic = Arc::new(Logic::new(datastore));
 
     // HTTP SERVER
     let http_listener = http::create_listener(config.http_port)
         .unwrap_or_else(|err| panic!("failed to init http listener: {}", err));
-    let http_server = http::init(http_listener, Arc::clone(&ctrl))
+    let http_server = http::init(http_listener, Arc::clone(&logic))
         .unwrap_or_else(|err| panic!("failed to init http server: {}", err));
 
     // GRPC SERVER
-    let grpc_server = grpc::init(config.grpc_port, ctrl)
+    let grpc_server = grpc::init(config.grpc_port, logic)
         .unwrap_or_else(|err| panic!("failed to init grpc server: {}", err));
 
     // RUNTIME

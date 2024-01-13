@@ -5,15 +5,14 @@ use crate::{
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-#[derive(Debug)]
 pub struct BlueprintServerImpl {
-    controller: Arc<logic::Controller>,
+    logic: Arc<logic::Logic>,
 }
 
 impl BlueprintServerImpl {
-    pub fn new(controller: Arc<logic::Controller>) -> Self {
+    pub fn new(logic: Arc<logic::Logic>) -> Self {
         BlueprintServerImpl {
-            controller,
+            logic,
         }
     }
 }
@@ -28,7 +27,7 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
     async fn create_user(&self, request: Request<proto::CreateUserRequest>) -> Result<Response<proto::User>, Status> {
         let request = request.into_inner();
 
-        match self.controller.create_user(logic::dto::CreateUserRequest {
+        match self.logic.create_user(logic::dto::CreateUserRequest {
             email: request.email,
             name: request.name,
         }) {
@@ -39,7 +38,7 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
 
     async fn get_user(&self, request: Request<String>) -> Result<Response<proto::User>, Status> {
         let request = request.into_inner();
-        match self.controller.get_user(&request) {
+        match self.logic.get_user(&request) {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }
@@ -47,7 +46,7 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
 
     async fn create_journal(&self, request: Request<proto::CreateJournalRequest>) -> Result<Response<proto::Journal>, Status> {
         let request = request.into_inner();
-        match self.controller.create_journal(logic::dto::CreateJournalRequest{ 
+        match self.logic.create_journal(logic::dto::CreateJournalRequest{ 
             title: request.title, 
             year: request.year,
          }) {
@@ -58,7 +57,7 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
 
     async fn get_journal(&self, request: Request<String>) -> Result<Response<proto::Journal>, Status> {
         let request = request.into_inner();
-        match self.controller.get_journal(&request) {
+        match self.logic.get_journal(&request) {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }
@@ -66,7 +65,7 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
 
     async fn create_subscription(&self, request: Request<proto::CreateSubscriptionRequest>) -> Result<Response<proto::Subscription>, Status> {
         let request = request.into_inner();
-        match self.controller.create_subscription(logic::dto::CreateSubscriptionRequest{
+        match self.logic.create_subscription(logic::dto::CreateSubscriptionRequest{
             user_id: request.user_id,
             journal_id: request.journal_id,
         }) {
@@ -77,7 +76,7 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
 
     async fn list_subscriptions_for_user(&self, request: Request<String>) -> Result<Response<proto::SubscriptionList>, Status> {
         let request = request.into_inner();
-        match self.controller.list_subscriptions_by_user(&request) {
+        match self.logic.list_subscriptions_by_user(&request) {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }

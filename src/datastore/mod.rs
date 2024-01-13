@@ -43,11 +43,10 @@ impl DatastoreError {
 
 impl Display for DatastoreError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
+        f.write_fmt(format_args!(
             "DatastoreError (msg: {}, error_type: {})",
             self.msg, self.error_type
-        )
+        ))
     }
 }
 

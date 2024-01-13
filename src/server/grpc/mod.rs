@@ -1,6 +1,9 @@
 mod handler;
 
-use crate::{logic, proto::blueprint_server::BlueprintServer};
+use crate::{
+    logic::{self},
+    proto::blueprint_server::BlueprintServer,
+};
 use futures::Future;
 use std::{error::Error, net::SocketAddr, sync::Arc};
 use tokio::signal::unix::SignalKind;
@@ -8,13 +11,13 @@ use tonic::{transport::Server, Request, Status};
 
 pub fn init(
     port: u16,
-    controller: Arc<logic::Controller>,
+    logic: Arc<logic::Logic>,
 ) -> Result<impl Future<Output = Result<(), tonic::transport::Error>>, Box<dyn Error>> {
     let addr = format!("127.0.0.1:{}", port);
     let addr: SocketAddr = addr.parse()?;
 
     // blueprint_server implementation
-    let handler = handler::BlueprintServerImpl::new(controller);
+    let handler = handler::BlueprintServerImpl::new(logic);
 
     let svr = BlueprintServer::with_interceptor(handler, intercept_logger);
 
@@ -36,6 +39,7 @@ async fn shutdown_watcher() {
 }
 
 fn intercept_logger(req: Request<()>) -> Result<Request<()>, Status> {
+    // todo: use "tower" instead of interceptor
     println!("Intercepting request: {:?}", req);
     Ok(req)
 }

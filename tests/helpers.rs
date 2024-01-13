@@ -3,7 +3,10 @@ use std::sync;
 use std::sync::Arc;
 
 use blueprint::{
-    bplog::JsonLogger, datastore::inmem::InMemDatastore, logic::Controller, server::http,
+    blueprint_logger::{LogFormat, Logger},
+    datastore::inmem::InMemDatastore,
+    logic::Logic,
+    server::http,
 };
 
 pub struct TestServer {
@@ -22,11 +25,8 @@ static LOG_INIT: sync::Once = sync::Once::new();
 
 pub fn spawn_app() -> TestServer {
     LOG_INIT.call_once(|| {
-        let logger = JsonLogger {};
-        log::set_boxed_logger(Box::new(logger)).unwrap_or_else(|err| {
-            panic!("failed to set logger: {:?}", err);
-        });
-        log::set_max_level(log::LevelFilter::Info);
+        // let logger = Logger::new(LogFormat::Json);
+        // logger.set_default();
     });
 
     // LOG_INIT.call_once(|| {
@@ -53,7 +53,7 @@ pub fn spawn_app() -> TestServer {
     let actual_http_port = listener.local_addr().unwrap().port();
 
     let ds = Arc::new(InMemDatastore::new());
-    let svc = Arc::new(Controller::new(ds));
+    let svc = Arc::new(Logic::new(ds));
 
     let http_server = http::init(listener, svc).unwrap_or_else(|err| {
         panic!("failed to start http server: {}", err);

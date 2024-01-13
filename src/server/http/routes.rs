@@ -1,7 +1,7 @@
 use crate::logic::{
     dto,
     error::{ServiceError, ServiceErrorCode, ServiceErrorType},
-    Controller,
+    Logic,
 };
 use actix_web::{
     http::Method,
@@ -62,7 +62,7 @@ pub(super) async fn healthz() -> impl Responder {
     HttpResponse::Ok()
 }
 
-pub(super) async fn post_user(svc: web::Data<Controller>, body: web::Bytes) -> HttpResult {
+pub(super) async fn post_user(logic: web::Data<Logic>, body: web::Bytes) -> HttpResult {
     let data = serde_json::from_slice::<dto::CreateUserRequest>(&body);
 
     if let Err(json_err) = data {
@@ -74,34 +74,29 @@ pub(super) async fn post_user(svc: web::Data<Controller>, body: web::Bytes) -> H
     }
 
     let data = data.unwrap();
-    let svc = svc.get_ref();
-    let result = svc.create_user(data)?;
+    let result = logic.create_user(data)?;
 
     Ok(HttpResponse::Created().json(result))
 }
 
-pub(super) async fn get_user(svc: web::Data<Controller>, req: HttpRequest) -> HttpResult {
+pub(super) async fn get_user(logic: web::Data<Logic>, req: HttpRequest) -> HttpResult {
     let id = req.match_info().get("id").unwrap();
-
-    let svc = svc.get_ref();
-    let result = svc.get_user(id)?;
+    let result = logic.get_user(id)?;
 
     Ok(HttpResponse::Ok().json(result))
 }
 
 pub(super) async fn list_subscriptions_by_user(
-    svc: web::Data<Controller>,
+    logic: web::Data<Logic>,
     req: HttpRequest,
 ) -> HttpResult {
     let user_id = req.match_info().get("user_id").unwrap();
-
-    let svc = svc.get_ref();
-    let result = svc.list_subscriptions_by_user(user_id)?;
+    let result = logic.list_subscriptions_by_user(user_id)?;
 
     Ok(HttpResponse::Ok().json(result))
 }
 
-pub(super) async fn post_subscription(svc: web::Data<Controller>, body: web::Bytes) -> HttpResult {
+pub(super) async fn post_subscription(logic: web::Data<Logic>, body: web::Bytes) -> HttpResult {
     let data = serde_json::from_slice::<dto::CreateSubscriptionRequest>(&body);
 
     if let Err(json_err) = data {
@@ -113,8 +108,7 @@ pub(super) async fn post_subscription(svc: web::Data<Controller>, body: web::Byt
     }
 
     let data = data.unwrap();
-    let svc = svc.get_ref();
-    let result = svc.create_subscription(data)?;
+    let result = logic.create_subscription(data)?;
 
     Ok(HttpResponse::Created().json(result))
 }

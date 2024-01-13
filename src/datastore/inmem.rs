@@ -201,7 +201,6 @@ mod tests {
     use super::InMemDatastore;
 
     #[test]
-
     fn datastore_is_send_sync() {
         let _: Box<dyn Send + Sync> = Box::new(InMemDatastore::new());
     }
