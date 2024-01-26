@@ -2,6 +2,7 @@ use blueprint::{
     datastore::inmem::InMemDatastore,
     logic::Logic,
     server::{grpc, http},
+    toolbox::logger,
     Config,
 };
 use std::sync::Arc;
@@ -10,8 +11,9 @@ fn main() {
     // CONFIG
     let config = Config::new_from_file("config.yaml")
         .unwrap_or_else(|err| panic!("failed to load config: {}", err));
-
-    println!("{:?}", config);
+    logger::logger()
+        .log_entry(logger::Level::Debug, format!("{:?}", config))
+        .publish();
     run(config)
 }
 
@@ -54,7 +56,9 @@ fn run(config: Config) {
 }
 
 fn cleanup() {
-    println!("cleaning up");
+    logger::logger()
+        .log_entry(logger::Level::Info, format!("cleaning up..."))
+        .publish();
     // todo
 }
 

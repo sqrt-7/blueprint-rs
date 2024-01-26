@@ -6,10 +6,13 @@ use self::{
     domain::{Email, JournalTitle, JournalYear, UserName, ID},
     error::*,
 };
-use crate::datastore::{Datastore, DatastoreError, DatastoreErrorType};
+use crate::{
+    datastore::{Datastore, DatastoreError, DatastoreErrorType},
+    toolbox::{context::Context, logger},
+};
 use std::{result, sync::Arc};
 
-pub type Result<T> = result::Result<T, ServiceError>;
+type Result<T> = result::Result<T, ServiceError>;
 
 pub struct Logic {
     datastore: Arc<dyn Datastore + Send + Sync>,
@@ -26,8 +29,13 @@ impl Logic {
     // USE CASES -------------
     // -----------------------
 
-    pub fn create_user(&self, data: dto::CreateUserRequest) -> Result<domain::User> {
-        log::info!("helllo");
+    pub fn create_user(
+        &self,
+        ctx: Arc<Context>,
+        data: dto::CreateUserRequest,
+    ) -> Result<domain::User> {
+        logger::ctx_info!(ctx, "hellllo");
+
         let new_id = ID::new();
         let email = Email::try_from(data.email)?;
         let name = UserName::try_from(data.name)?;
@@ -41,7 +49,7 @@ impl Logic {
         Ok(obj)
     }
 
-    pub fn get_user(&self, id: &str) -> Result<domain::User> {
+    pub fn get_user(&self, _: Arc<Context>, id: &str) -> Result<domain::User> {
         let id = ID::try_from(id)?;
         match self.datastore.get_user(&id) {
             Ok(obj) => Ok(obj),
@@ -56,7 +64,11 @@ impl Logic {
         }
     }
 
-    pub fn create_journal(&self, data: dto::CreateJournalRequest) -> Result<domain::Journal> {
+    pub fn create_journal(
+        &self,
+        _: Arc<Context>,
+        data: dto::CreateJournalRequest,
+    ) -> Result<domain::Journal> {
         let new_id = ID::new();
         let title = JournalTitle::try_from(data.title)?;
         let year = JournalYear::try_from(data.year)?;
@@ -70,7 +82,7 @@ impl Logic {
         Ok(obj)
     }
 
-    pub fn get_journal(&self, id: &str) -> Result<domain::Journal> {
+    pub fn get_journal(&self, _: Arc<Context>, id: &str) -> Result<domain::Journal> {
         let id = ID::try_from(id)?;
         match self.datastore.get_journal(&id) {
             Ok(obj) => Ok(obj),
@@ -87,6 +99,7 @@ impl Logic {
 
     pub fn create_subscription(
         &self,
+        _: Arc<Context>,
         data: dto::CreateSubscriptionRequest,
     ) -> Result<domain::Subscription> {
         let user_id = ID::try_from(data.user_id)?;
@@ -102,7 +115,11 @@ impl Logic {
         Ok(sub)
     }
 
-    pub fn list_subscriptions_by_user(&self, user_id: &str) -> Result<Vec<domain::Subscription>> {
+    pub fn list_subscriptions_by_user(
+        &self,
+        _: Arc<Context>,
+        user_id: &str,
+    ) -> Result<Vec<domain::Subscription>> {
         let user_id = ID::try_from(user_id)?;
         match self
             .datastore

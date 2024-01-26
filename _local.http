@@ -1,6 +1,6 @@
-@base_url = http://127.0.0.1:8000
+@base_url = http://127.0.0.1:8000/api/v1
 
-@user_id1 = 5de405aa-f808-45bd-875b-2de10539ce5a
+@user_id1 = f990d059-ed74-4cf5-bac8-5c6e71a05c84
 
 ### Healthz
 GET {{base_url}}/healthz

@@ -1,15 +1,15 @@
 mod routes;
 
 use crate::{
-    blueprint_logger, context,
     logic::{self},
+    toolbox::{context, logger},
 };
 use actix_web::{
     body::MessageBody,
     dev::{ServiceRequest, ServiceResponse},
     web, HttpMessage,
 };
-use actix_web_lab::middleware::{from_fn, Next};
+use actix_web_lab::middleware;
 use std::{error::Error, net::TcpListener, sync::Arc};
 
 pub fn create_listener(port: u16) -> Result<TcpListener, Box<dyn Error>> {
@@ -28,7 +28,7 @@ pub fn init(
             // Attach logic controller
             .app_data(logic)
             // Custom request/response logging middleware
-            .wrap(from_fn(custom_logger_mw))
+            .wrap(middleware::from_fn(custom_logger_mw))
             // Register endpoints
             .configure(routes::endpoints)
     };
@@ -44,15 +44,18 @@ pub fn init(
 
 async fn custom_logger_mw(
     req: ServiceRequest,
-    next: Next<impl MessageBody>,
+    next: middleware::Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, actix_web::Error> {
-    let mut ctx = context::Context::new();
-    ctx.store("test", uuid::Uuid::new_v4().to_string());
-    req.extensions_mut().insert(ctx);
+    let tid = uuid::Uuid::new_v4().to_string(); // todo
+    let ctx = Arc::new(context::Context::new());
+    ctx.store("trace_id", tid);
+    req.extensions_mut()
+        .insert(Arc::clone(&ctx));
 
     // LOG REQUEST
-    log::info!(
-        "[http_request] method: {} | url: {}",
+    logger::ctx_info!(
+        &ctx,
+        "[HTTP] method: {} | url: {}",
         req.method().to_string(),
         req.uri().to_string(),
     );
@@ -62,7 +65,7 @@ async fn custom_logger_mw(
 
     // LOG RESPONSE
     if let Err(ref e) = resp_wrap {
-        log::error!("handler failed: {:?}", e);
+        logger::ctx_error!(&ctx, "handler failed: {:?}", e);
         return resp_wrap;
     }
 
@@ -71,9 +74,9 @@ async fn custom_logger_mw(
     if let Some(err) = resp.response().error() {
         //if let Some(svc_err) = err.as_error::<logic::error::ServiceError>() {
         if resp.status().is_client_error() {
-            log::warn!("{:?}", err);
+            logger::ctx_warning!(&ctx, "{:?}", err);
         } else {
-            log::error!("{:?}", err);
+            logger::ctx_error!(&ctx, "{:?}", err);
         }
         //}
     };
