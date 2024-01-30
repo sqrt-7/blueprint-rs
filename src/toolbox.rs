@@ -2,7 +2,7 @@ pub mod context {
     use std::{collections::HashMap, sync::Mutex};
 
     pub struct Context {
-        store: Mutex<HashMap<String, Box<dyn std::any::Any>>>,
+        store: Mutex<HashMap<String, Box<dyn std::any::Any + Send + Sync>>>,
     }
 
     impl Context {
@@ -12,7 +12,7 @@ pub mod context {
             }
         }
 
-        pub fn store<T: 'static>(&self, key: &str, item: T) {
+        pub fn store<T: 'static + Send + Sync>(&self, key: &str, item: T) {
             self.store
                 .lock()
                 .unwrap()
@@ -68,6 +68,12 @@ pub mod context {
     #[cfg(test)]
     mod tests {
         use super::*;
+
+        #[test]
+        fn context_is_send_sync() {
+            let _: Box<dyn Sync> = Box::new(Context::new());
+            let _: Box<dyn Send> = Box::new(Context::new());
+        }
 
         #[test]
         fn store_and_get_clone() {

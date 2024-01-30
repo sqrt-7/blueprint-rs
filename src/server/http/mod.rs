@@ -49,7 +49,7 @@ async fn inject_context(
     next: middleware::Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, actix_web::Error> {
     let tid = uuid::Uuid::new_v4().to_string(); // todo
-    let ctx = context::Context::new();
+    let ctx = Arc::new(context::Context::new());
     ctx.store("trace_id", tid);
     req.extensions_mut().insert(ctx);
 
