@@ -29,11 +29,7 @@ impl Logic {
     // USE CASES -------------
     // -----------------------
 
-    pub fn create_user(
-        &self,
-        ctx: Arc<Context>,
-        data: dto::CreateUserRequest,
-    ) -> Result<domain::User> {
+    pub fn create_user(&self, ctx: &Context, data: dto::CreateUserRequest) -> Result<domain::User> {
         logger::ctx_info!(ctx, "hellllo");
 
         let new_id = ID::new();
@@ -49,7 +45,7 @@ impl Logic {
         Ok(obj)
     }
 
-    pub fn get_user(&self, _: Arc<Context>, id: &str) -> Result<domain::User> {
+    pub fn get_user(&self, _: &Context, id: &str) -> Result<domain::User> {
         let id = ID::try_from(id)?;
         match self.datastore.get_user(&id) {
             Ok(obj) => Ok(obj),
@@ -66,7 +62,7 @@ impl Logic {
 
     pub fn create_journal(
         &self,
-        _: Arc<Context>,
+        _: &Context,
         data: dto::CreateJournalRequest,
     ) -> Result<domain::Journal> {
         let new_id = ID::new();
@@ -82,7 +78,7 @@ impl Logic {
         Ok(obj)
     }
 
-    pub fn get_journal(&self, _: Arc<Context>, id: &str) -> Result<domain::Journal> {
+    pub fn get_journal(&self, _: &Context, id: &str) -> Result<domain::Journal> {
         let id = ID::try_from(id)?;
         match self.datastore.get_journal(&id) {
             Ok(obj) => Ok(obj),
@@ -99,7 +95,7 @@ impl Logic {
 
     pub fn create_subscription(
         &self,
-        _: Arc<Context>,
+        _: &Context,
         data: dto::CreateSubscriptionRequest,
     ) -> Result<domain::Subscription> {
         let user_id = ID::try_from(data.user_id)?;
@@ -117,7 +113,7 @@ impl Logic {
 
     pub fn list_subscriptions_by_user(
         &self,
-        _: Arc<Context>,
+        _: &Context,
         user_id: &str,
     ) -> Result<Vec<domain::Subscription>> {
         let user_id = ID::try_from(user_id)?;

@@ -25,10 +25,10 @@ pub mod context {
                 .unwrap()
                 .get(&key.to_string())
                 .and_then(|boxed_any| boxed_any.downcast_ref::<T>())
-                .and_then(|raw| Some(raw.clone()))
+                .cloned()
         }
 
-        pub fn get_move<T: 'static>(&self, key: &str) -> Option<T> {
+        pub fn pop<T: 'static>(&self, key: &str) -> Option<T> {
             self.store
                 .lock()
                 .unwrap()
@@ -59,6 +59,12 @@ pub mod context {
         }
     }
 
+    impl Default for Context {
+        fn default() -> Self {
+            Context::new()
+        }
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -74,22 +80,48 @@ pub mod context {
         }
 
         #[test]
+        fn store_and_pop() {
+            let ctx = Context::new();
+            let key: &str = "test-1";
+            let val = String::from("12345");
+            ctx.store(key, val.clone());
+
+            let res = ctx.pop::<String>(key).unwrap();
+            assert_eq!(res, val);
+
+            let res2 = ctx.pop::<String>(key);
+            assert_eq!(res2, None);
+        }
+
+        #[test]
         fn store_and_modify() {
             let ctx = Context::new();
             ctx.store("test", String::from("12345"));
 
-            ctx.modify("test", |v: &mut String| {
-                v.push_str("67890");
-            });
+            {
+                let res = ctx.modify("test", |v: &mut String| {
+                    v.push_str("67890");
+                });
+                assert!(res == true);
+            }
 
-            let res = ctx.get_clone::<String>("test").unwrap();
-            assert_eq!(res, "1234567890");
+            {
+                let res = ctx.pop::<String>("test").unwrap();
+                assert_eq!(res, "1234567890");
+            }
+
+            {
+                let res = ctx.modify("test", |v: &mut String| {
+                    v.push_str("67890");
+                });
+                assert!(res == false);
+            }
         }
     }
 }
 
 pub mod logger {
-    static LOGGER: &'static Logger = &Logger {
+    static LOGGER: &Logger = &Logger {
         format: LogFormat::Json,
     };
 
@@ -176,8 +208,8 @@ pub mod logger {
     }
 
     impl LogEntry {
-        pub fn with_trace_id(mut self, trace_id: &String) -> LogEntry {
-            self.trace_id = trace_id.clone();
+        pub fn with_trace_id(mut self, trace_id: &str) -> LogEntry {
+            self.trace_id = trace_id.to_string();
             self
         }
 

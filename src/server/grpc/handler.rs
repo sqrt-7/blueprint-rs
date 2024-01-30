@@ -28,10 +28,10 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
     async fn create_user(&self, request: Request<proto::CreateUserRequest>) -> Result<Response<proto::User>, Status> {
         let request = request.into_inner();
         let tid = uuid::Uuid::new_v4().to_string(); // todo
-        let ctx = Arc::new(context::Context::new());
+        let ctx = context::Context::new();
         ctx.store("trace_id", tid);
         
-        match self.logic.create_user(ctx, logic::dto::CreateUserRequest {
+        match self.logic.create_user(&ctx, logic::dto::CreateUserRequest {
             email: request.email,
             name: request.name,
         }) {
@@ -43,10 +43,10 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
     async fn get_user(&self, request: Request<String>) -> Result<Response<proto::User>, Status> {
         let request = request.into_inner();
         let tid = uuid::Uuid::new_v4().to_string(); // todo
-        let ctx = Arc::new(context::Context::new());
+        let ctx = context::Context::new();
         ctx.store("trace_id", tid);
 
-        match self.logic.get_user(ctx, &request) {
+        match self.logic.get_user(&ctx, &request) {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }
@@ -55,10 +55,10 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
     async fn create_journal(&self, request: Request<proto::CreateJournalRequest>) -> Result<Response<proto::Journal>, Status> {
         let request = request.into_inner();
         let tid = uuid::Uuid::new_v4().to_string(); // todo
-        let ctx = Arc::new(context::Context::new());
+        let ctx = context::Context::new();
         ctx.store("trace_id", tid);
         
-        match self.logic.create_journal(ctx, logic::dto::CreateJournalRequest{ 
+        match self.logic.create_journal(&ctx, logic::dto::CreateJournalRequest{ 
             title: request.title, 
             year: request.year,
          }) {
@@ -70,10 +70,10 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
     async fn get_journal(&self, request: Request<String>) -> Result<Response<proto::Journal>, Status> {
         let request = request.into_inner();
         let tid = uuid::Uuid::new_v4().to_string(); // todo
-        let ctx = Arc::new(context::Context::new());
+        let ctx = context::Context::new();
         ctx.store("trace_id", tid);
         
-        match self.logic.get_journal(ctx, &request) {
+        match self.logic.get_journal(&ctx, &request) {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }
@@ -82,10 +82,10 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
     async fn create_subscription(&self, request: Request<proto::CreateSubscriptionRequest>) -> Result<Response<proto::Subscription>, Status> {
         let request = request.into_inner();
         let tid = uuid::Uuid::new_v4().to_string(); // todo
-        let ctx = Arc::new(context::Context::new());
+        let ctx = context::Context::new();
         ctx.store("trace_id", tid);
         
-        match self.logic.create_subscription(ctx, logic::dto::CreateSubscriptionRequest{
+        match self.logic.create_subscription(&ctx, logic::dto::CreateSubscriptionRequest{
             user_id: request.user_id,
             journal_id: request.journal_id,
         }) {
@@ -97,10 +97,10 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
     async fn list_subscriptions_for_user(&self, request: Request<String>) -> Result<Response<proto::SubscriptionList>, Status> {
         let request = request.into_inner();
         let tid = uuid::Uuid::new_v4().to_string(); // todo
-        let ctx = Arc::new(context::Context::new());
+        let ctx = context::Context::new();
         ctx.store("trace_id", tid);
         
-        match self.logic.list_subscriptions_by_user(ctx, &request) {
+        match self.logic.list_subscriptions_by_user(&ctx, &request) {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }

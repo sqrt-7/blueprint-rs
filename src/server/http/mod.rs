@@ -29,6 +29,8 @@ pub fn init(
             .app_data(logic)
             // Custom request/response logging middleware
             .wrap(middleware::from_fn(custom_logger_mw))
+            // Inject Context into request
+            .wrap(middleware::from_fn(inject_context))
             // Register endpoints
             .configure(routes::endpoints)
     };
@@ -42,15 +44,23 @@ pub fn init(
     Ok(server)
 }
 
-async fn custom_logger_mw(
+async fn inject_context(
     req: ServiceRequest,
     next: middleware::Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, actix_web::Error> {
     let tid = uuid::Uuid::new_v4().to_string(); // todo
-    let ctx = Arc::new(context::Context::new());
+    let ctx = context::Context::new();
     ctx.store("trace_id", tid);
-    req.extensions_mut()
-        .insert(Arc::clone(&ctx));
+    req.extensions_mut().insert(ctx);
+
+    next.call(req).await
+}
+
+async fn custom_logger_mw(
+    req: ServiceRequest,
+    next: middleware::Next<impl MessageBody>,
+) -> Result<ServiceResponse<impl MessageBody>, actix_web::Error> {
+    let ctx = ctx_from_req(req.request());
 
     // LOG REQUEST
     logger::ctx_info!(
@@ -82,4 +92,12 @@ async fn custom_logger_mw(
     };
 
     resp_wrap
+}
+
+fn ctx_from_req(req: &actix_web::HttpRequest) -> Arc<context::Context> {
+    let ext = req.extensions();
+    let ctx = ext
+        .get::<Arc<context::Context>>()
+        .unwrap();
+    Arc::clone(ctx)
 }

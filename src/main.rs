@@ -57,7 +57,7 @@ fn run(config: Config) {
 
 fn cleanup() {
     logger::logger()
-        .log_entry(logger::Level::Info, format!("cleaning up..."))
+        .log_entry(logger::Level::Info, "cleaning up...".to_string())
         .publish();
     // todo
 }
