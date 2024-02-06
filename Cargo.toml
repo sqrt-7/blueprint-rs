@@ -17,22 +17,18 @@ actix-service = "2.0.2"
 actix-web = "4"
 actix-web-lab = "0.20.1"
 bytes = "1.4.0"
-config = "0.13.2"
+config = "0.14.0"
 futures = "0.3.28"
-log = { version = "0.4.17", features = ["std"] }
-#opentelemetry = "0.18.0"
-#opentelemetry_api = "0.18.0"
 paste = "1.0.12"
 prost = "0.12.3"
 prost-types = "0.12.3"
 rand = "0.8.5"
 serde = { version = "1.0.147", features = ["derive"] }
 serde_json = "1.0.87"
+sqlx = { version = "0.7.3", features = ["runtime-tokio", "mysql"] }
 time = "0.3.20"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tonic = "0.10.2"
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["json", "tracing-log"] }
 uuid = { version = "1.2.1", features = ["v4"] }
 
 [dev-dependencies]

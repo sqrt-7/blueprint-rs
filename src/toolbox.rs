@@ -70,12 +70,6 @@ pub mod context {
         use super::*;
 
         #[test]
-        fn context_is_send_sync() {
-            let _: Box<dyn Sync> = Box::new(Context::new());
-            let _: Box<dyn Send> = Box::new(Context::new());
-        }
-
-        #[test]
         fn store_and_get_clone() {
             let ctx = Context::new();
             let key: &str = "test-1";

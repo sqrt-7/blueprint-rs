@@ -17,13 +17,43 @@ pub mod proto {
 pub struct Config {
     pub http_port: u16,
     pub grpc_port: u16,
+    pub datastore: ConfigDbType,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(tag = "db_type", content = "config")]
+pub enum ConfigDbType {
+    #[serde(rename = "inmem")]
+    InMem,
+    #[serde(rename = "mysql")]
+    MySql {
+        addr: String,
+        port: u16,
+        user: String,
+        password: String,
+    },
+}
+
+impl std::fmt::Debug for ConfigDbType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InMem => f.write_str("InMem"),
+            Self::MySql {
+                addr,
+                port,
+                user,
+                .. // hide password
+            } => write!(f, "MySql {user}@{addr}:{port}"),
+        }
+    }
 }
 
 impl Config {
-    pub fn new(http_port: u16, grpc_port: u16) -> Self {
+    pub fn new(http_port: u16, grpc_port: u16, datastore: ConfigDbType) -> Self {
         Config {
             http_port,
             grpc_port,
+            datastore,
         }
     }
 

@@ -1,11 +1,12 @@
 use blueprint::{
-    datastore::inmem::InMemDatastore,
+    datastore::{inmem::InMemDatastore, sql::SqlDatastore, Datastore},
     logic::Logic,
     server::{grpc, http},
     toolbox::logger,
-    Config,
+    Config, ConfigDbType,
 };
 use std::sync::Arc;
+use tokio::runtime::Runtime;
 
 fn main() {
     // CONFIG
@@ -18,11 +19,14 @@ fn main() {
 }
 
 fn run(config: Config) {
-    // TRACING
-    init_tracing();
+    // RUNTIME
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap_or_else(|err| panic!("failed to build tokio runtime: {}", err));
 
     // DB
-    let datastore = Arc::new(InMemDatastore::new());
+    let datastore = init_db(config.datastore, &runtime);
 
     // LOGIC CONTROLLER
     let logic = Arc::new(Logic::new(datastore));
@@ -37,12 +41,6 @@ fn run(config: Config) {
     let grpc_server = grpc::init(config.grpc_port, logic)
         .unwrap_or_else(|err| panic!("failed to init grpc server: {}", err));
 
-    // RUNTIME
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap_or_else(|err| panic!("failed to build tokio runtime: {}", err));
-
     runtime.block_on(async {
         if let Err(e) = tokio::try_join!(
             runtime.spawn(http_server),
@@ -55,14 +53,33 @@ fn run(config: Config) {
     cleanup();
 }
 
+fn init_db(config: ConfigDbType, runtime: &Runtime) -> Arc<dyn Datastore + Send + Sync> {
+    match config {
+        blueprint::ConfigDbType::InMem => Arc::new(InMemDatastore::new()),
+        blueprint::ConfigDbType::MySql {
+            addr,
+            port,
+            user,
+            password,
+        } => {
+            let res =
+                runtime.block_on(async { SqlDatastore::new(&addr, port, &user, &password).await });
+
+            if let Err(e) = res {
+                panic!("failed to connect to db: {}", e);
+            }
+
+            logger::logger()
+                .log_entry(logger::Level::Info, "MYSQL_CONNECTED".to_string())
+                .publish();
+            Arc::new(res.unwrap())
+        },
+    }
+}
+
 fn cleanup() {
     logger::logger()
         .log_entry(logger::Level::Info, "cleaning up...".to_string())
         .publish();
     // todo
-}
-
-fn init_tracing() {
-    //tracing_subscriber::fmt().json().init();
-    //tracing::dispatcher::set_global_default(dispatcher)
 }

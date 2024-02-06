@@ -1,2 +1,9 @@
 http_port: 8000
 grpc_port: 9000
+datastore:
+  db_type: "mysql"
+  config:
+    addr: "localhost"
+    port: 32771
+    user: "foo"
+    password: "local12345"

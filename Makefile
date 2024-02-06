@@ -24,3 +24,6 @@ test:
 
 grpcui:
 	grpcui -plaintext -v -proto ./proto/blueprint.proto 127.0.0.1:9000
+
+create-local-db:
+	docker run -d -t -i --name mysql_local -p 3306 -e MYSQL_ROOT_PASSWORD=root12345 -e MYSQL_USER=foo -e MYSQL_PASSWORD=local12345 mysql:latest
