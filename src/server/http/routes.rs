@@ -1,7 +1,7 @@
 use crate::{
     logic::{
         dto,
-        error::{ServiceError, ServiceErrorCode, ServiceErrorType},
+        error::{ServiceError, ServiceErrorCode},
         Logic,
     },
     toolbox::logger,
@@ -61,25 +61,22 @@ pub(super) async fn healthz() -> impl Responder {
 }
 
 pub(super) async fn post_user(
-    logic: web::Data<Logic>,
-    req: HttpRequest,
-    body: web::Bytes,
+    logic: web::Data<Logic>, req: HttpRequest, body: web::Bytes,
 ) -> HttpResult {
+    println!("id: {:?}", std::thread::current().id());
+    println!("name: {:?}", std::thread::current().name());
+
     let ctx = super::ctx_from_req(&req);
     let data = serde_json::from_slice::<dto::CreateUserRequest>(&body);
 
     if let Err(json_err) = data {
-        return Err(
-            ServiceError::new(ServiceErrorCode::UserInvalidData)
-                .with_type(ServiceErrorType::InvalidArgument)
-                .wrap(json_err),
-        );
+        return Err(ServiceError::new(ServiceErrorCode::UserInvalidData).wrap(json_err));
     }
 
     logger::ctx_info!(ctx, "hello");
 
     let data = data.unwrap();
-    let result = logic.create_user(&ctx, data)?;
+    let result = logic.create_user(&ctx, data).await?;
 
     Ok(HttpResponse::Created().json(result))
 }
@@ -87,40 +84,37 @@ pub(super) async fn post_user(
 pub(super) async fn get_user(logic: web::Data<Logic>, req: HttpRequest) -> HttpResult {
     let ctx = super::ctx_from_req(&req);
     let id = req.match_info().get("id").unwrap();
-    let result = logic.get_user(&ctx, id)?;
+    let result = logic.get_user(&ctx, id).await?;
 
     Ok(HttpResponse::Ok().json(result))
 }
 
 pub(super) async fn list_subscriptions_by_user(
-    logic: web::Data<Logic>,
-    req: HttpRequest,
+    logic: web::Data<Logic>, req: HttpRequest,
 ) -> HttpResult {
     let ctx = super::ctx_from_req(&req);
     let user_id = req.match_info().get("user_id").unwrap();
-    let result = logic.list_subscriptions_by_user(&ctx, user_id)?;
+    let result = logic
+        .list_subscriptions_by_user(&ctx, user_id)
+        .await?;
 
     Ok(HttpResponse::Ok().json(result))
 }
 
 pub(super) async fn post_subscription(
-    logic: web::Data<Logic>,
-    req: HttpRequest,
-    body: web::Bytes,
+    logic: web::Data<Logic>, req: HttpRequest, body: web::Bytes,
 ) -> HttpResult {
     let ctx = super::ctx_from_req(&req);
     let data = serde_json::from_slice::<dto::CreateSubscriptionRequest>(&body);
 
     if let Err(json_err) = data {
-        return Err(
-            ServiceError::new(ServiceErrorCode::SubscriptionInvalidData)
-                .with_type(ServiceErrorType::InvalidArgument)
-                .wrap(json_err),
-        );
+        return Err(ServiceError::new(ServiceErrorCode::SubscriptionInvalidData).wrap(json_err));
     }
 
     let data = data.unwrap();
-    let result = logic.create_subscription(&ctx, data)?;
+    let result = logic
+        .create_subscription(&ctx, data)
+        .await?;
 
     Ok(HttpResponse::Created().json(result))
 }

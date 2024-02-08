@@ -1,8 +1,6 @@
-use super::{Datastore, DatastoreError, DatastoreErrorType};
+use super::{DataResult, Datastore, DatastoreError, DatastoreErrorType};
 use crate::logic::domain;
-use std::{collections::HashMap, result, sync::Mutex};
-
-type Result<T> = result::Result<T, DatastoreError>;
+use std::{collections::HashMap, sync::Mutex};
 
 pub struct InMemDatastore {
     // HashMap<String, String> and Vec<String> are Send+Sync
@@ -31,7 +29,7 @@ impl InMemDatastore {
         }
     }
 
-    fn to_json<T>(item: T) -> Result<String>
+    fn to_json<T>(item: T) -> DataResult<String>
     where
         T: serde::Serialize,
     {
@@ -44,7 +42,7 @@ impl InMemDatastore {
         }
     }
 
-    fn from_json<'a, T>(js: &'a str) -> Result<T>
+    fn from_json<'a, T>(js: &'a str) -> DataResult<T>
     where
         T: serde::Deserialize<'a>,
     {
@@ -64,15 +62,19 @@ impl Default for InMemDatastore {
     }
 }
 
+#[tonic::async_trait]
 impl Datastore for InMemDatastore {
-    fn store_user(&self, obj: &domain::User) -> Result<()> {
+    async fn store_user(&self, obj: &domain::User) -> DataResult<()> {
+        println!("id: {:?}", std::thread::current().id());
+        println!("name: {:?}", std::thread::current().name());
+
         let data = InMemDatastore::to_json(obj)?;
         let mut db = self.users.lock().unwrap();
         db.insert(obj.id().to_string(), data);
         Ok(())
     }
 
-    fn get_user(&self, id: &domain::ID) -> Result<domain::User> {
+    async fn get_user(&self, id: &domain::ID) -> DataResult<domain::User> {
         let db = self.users.lock().unwrap();
         match db.get(&id.to_string()) {
             Some(data) => {
@@ -87,14 +89,14 @@ impl Datastore for InMemDatastore {
         }
     }
 
-    fn store_journal(&self, obj: &domain::Journal) -> Result<()> {
+    async fn store_journal(&self, obj: &domain::Journal) -> DataResult<()> {
         let data = InMemDatastore::to_json(obj)?;
         let mut db = self.journals.lock().unwrap();
         db.insert(obj.id().to_string(), data);
         Ok(())
     }
 
-    fn get_journal(&self, id: &domain::ID) -> Result<domain::Journal> {
+    async fn get_journal(&self, id: &domain::ID) -> DataResult<domain::Journal> {
         let db = self.journals.lock().unwrap();
         match db.get(&id.to_string()) {
             Some(data) => {
@@ -109,7 +111,7 @@ impl Datastore for InMemDatastore {
         }
     }
 
-    fn store_subscription(&self, sub: &domain::Subscription) -> Result<()> {
+    async fn store_subscription(&self, sub: &domain::Subscription) -> DataResult<()> {
         let mut db = self.subs.lock().unwrap();
         let data = InMemDatastore::to_json(sub)?;
 
@@ -152,10 +154,9 @@ impl Datastore for InMemDatastore {
         Ok(())
     }
 
-    fn list_subscriptions_by_user(
-        &self,
-        user_id: &domain::ID,
-    ) -> Result<Vec<domain::Subscription>> {
+    async fn list_subscriptions_by_user(
+        &self, user_id: &domain::ID,
+    ) -> DataResult<Vec<domain::Subscription>> {
         let db = self.subs.lock().unwrap();
 
         let mut found = Vec::new();
@@ -205,7 +206,8 @@ mod tests {
         let _: Box<dyn Send + Sync> = Box::new(InMemDatastore::new());
     }
 
-    fn add_user_get_user() {
+    #[tokio::test]
+    async fn add_user_get_user() {
         let ds = InMemDatastore::new();
         let usr = User::new(
             ID::new(),
@@ -213,16 +215,16 @@ mod tests {
             UserName::try_from("Jeff Jeffries".to_owned()).unwrap(),
         );
 
-        ds.store_user(&usr).unwrap();
+        ds.store_user(&usr).await.unwrap();
 
-        let res = ds.get_user(usr.id()).unwrap();
+        let res = ds.get_user(usr.id()).await.unwrap();
         assert_eq!(res.id().to_string(), usr.id().to_string());
         assert_eq!(res.email().to_string(), usr.email().to_string());
         assert_eq!(res.name().to_string(), usr.name().to_string());
     }
 
-    #[test]
-    fn get_user_corrupt_data() {
+    #[tokio::test]
+    async fn get_user_corrupt_data() {
         let ds = InMemDatastore::new();
         let user_id = ID::new();
 
@@ -237,6 +239,7 @@ mod tests {
 
         let res = ds
             .get_user(&user_id)
+            .await
             .expect_err("should be error");
 
         assert!(matches!(
@@ -245,8 +248,8 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn add_subs_list_subs() {
+    #[tokio::test]
+    async fn add_subs_list_subs() {
         let ds = InMemDatastore::new();
 
         let user1 = ID::new();
@@ -259,19 +262,38 @@ mod tests {
         let sub5 = Subscription::new(ID::new(), user2.clone(), ID::new());
         let sub6 = Subscription::new(ID::new(), user2.clone(), ID::new());
 
-        ds.store_subscription(&sub1).unwrap();
-        ds.store_subscription(&sub1).unwrap(); // duplicate
-        ds.store_subscription(&sub1).unwrap(); // duplicate
-        ds.store_subscription(&sub2).unwrap();
-        ds.store_subscription(&sub2).unwrap(); // duplicate
-        ds.store_subscription(&sub3).unwrap();
-        ds.store_subscription(&sub4).unwrap();
-        ds.store_subscription(&sub5).unwrap();
-        ds.store_subscription(&sub6).unwrap();
+        ds.store_subscription(&sub1)
+            .await
+            .unwrap();
+        ds.store_subscription(&sub1)
+            .await
+            .unwrap(); // duplicate
+        ds.store_subscription(&sub1)
+            .await
+            .unwrap(); // duplicate
+        ds.store_subscription(&sub2)
+            .await
+            .unwrap();
+        ds.store_subscription(&sub2)
+            .await
+            .unwrap(); // duplicate
+        ds.store_subscription(&sub3)
+            .await
+            .unwrap();
+        ds.store_subscription(&sub4)
+            .await
+            .unwrap();
+        ds.store_subscription(&sub5)
+            .await
+            .unwrap();
+        ds.store_subscription(&sub6)
+            .await
+            .unwrap();
 
         {
             let res = ds
                 .list_subscriptions_by_user(&user1)
+                .await
                 .unwrap();
 
             assert!(res.len() == 3);
@@ -283,6 +305,7 @@ mod tests {
         {
             let res = ds
                 .list_subscriptions_by_user(&user2)
+                .await
                 .unwrap();
 
             assert!(res.len() == 3);
@@ -295,6 +318,7 @@ mod tests {
             let some_fake_id = domain::ID::new();
             let res = ds
                 .list_subscriptions_by_user(&some_fake_id)
+                .await
                 .unwrap();
             assert!(res.len() == 0);
         }

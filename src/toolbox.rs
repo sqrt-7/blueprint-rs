@@ -152,12 +152,7 @@ pub mod logger {
         }
 
         pub fn log_entry_filled(
-            &self,
-            level: Level,
-            msg: String,
-            trace_id: String,
-            path: String,
-            line: String,
+            &self, level: Level, msg: String, trace_id: String, path: String, line: String,
         ) -> LogEntry {
             LogEntry {
                 format: self.format,

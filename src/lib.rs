@@ -43,7 +43,7 @@ impl std::fmt::Debug for ConfigDbType {
                 port,
                 user,
                 .. // hide password
-            } => write!(f, "MySql {user}@{addr}:{port}"),
+            } => write!(f, "MySql({user}:xxx@{addr}:{port})"),
         }
     }
 }

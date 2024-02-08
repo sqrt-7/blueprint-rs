@@ -5,7 +5,7 @@ use blueprint::{
     toolbox::logger,
     Config, ConfigDbType,
 };
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tokio::runtime::Runtime;
 
 fn main() {
@@ -19,6 +19,9 @@ fn main() {
 }
 
 fn run(config: Config) {
+    println!("id: {:?}", std::thread::current().id());
+    println!("name: {:?}", std::thread::current().name());
+
     // RUNTIME
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -50,12 +53,17 @@ fn run(config: Config) {
         }
     });
 
-    cleanup();
+    // Cleanup
+    logger::logger()
+        .log_entry(logger::Level::Info, "cleaning up...".to_string())
+        .publish();
+
+    runtime.shutdown_timeout(Duration::from_secs(5));
 }
 
-fn init_db(config: ConfigDbType, runtime: &Runtime) -> Arc<dyn Datastore + Send + Sync> {
+fn init_db(config: ConfigDbType, runtime: &Runtime) -> Box<dyn Datastore + Send + Sync> {
     match config {
-        blueprint::ConfigDbType::InMem => Arc::new(InMemDatastore::new()),
+        blueprint::ConfigDbType::InMem => Box::new(InMemDatastore::new()),
         blueprint::ConfigDbType::MySql {
             addr,
             port,
@@ -72,14 +80,7 @@ fn init_db(config: ConfigDbType, runtime: &Runtime) -> Arc<dyn Datastore + Send 
             logger::logger()
                 .log_entry(logger::Level::Info, "MYSQL_CONNECTED".to_string())
                 .publish();
-            Arc::new(res.unwrap())
+            Box::new(res.unwrap())
         },
     }
-}
-
-fn cleanup() {
-    logger::logger()
-        .log_entry(logger::Level::Info, "cleaning up...".to_string())
-        .publish();
-    // todo
 }

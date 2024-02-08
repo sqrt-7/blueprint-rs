@@ -19,9 +19,11 @@ pub fn create_listener(port: u16) -> Result<TcpListener, Box<dyn Error>> {
 }
 
 pub fn init(
-    listener: TcpListener,
-    logic: Arc<logic::Logic>,
+    listener: TcpListener, logic: Arc<logic::Logic>,
 ) -> Result<actix_web::dev::Server, Box<dyn Error>> {
+    println!("id: {:?}", std::thread::current().id());
+    println!("name: {:?}", std::thread::current().name());
+
     let app_init = move || {
         let logic = web::Data::from(Arc::clone(&logic));
         actix_web::App::new()
@@ -45,8 +47,7 @@ pub fn init(
 }
 
 async fn inject_context(
-    req: ServiceRequest,
-    next: middleware::Next<impl MessageBody>,
+    req: ServiceRequest, next: middleware::Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, actix_web::Error> {
     let tid = uuid::Uuid::new_v4().to_string(); // todo
     let ctx = Arc::new(context::Context::new());
@@ -57,8 +58,7 @@ async fn inject_context(
 }
 
 async fn custom_logger_mw(
-    req: ServiceRequest,
-    next: middleware::Next<impl MessageBody>,
+    req: ServiceRequest, next: middleware::Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, actix_web::Error> {
     let ctx = ctx_from_req(req.request());
 

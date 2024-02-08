@@ -31,10 +31,12 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
         let ctx = context::Context::new();
         ctx.store("trace_id", tid);
         
-        match self.logic.create_user(&ctx, logic::dto::CreateUserRequest {
+        let req = logic::dto::CreateUserRequest {
             email: request.email,
             name: request.name,
-        }) {
+        };
+
+        match self.logic.create_user(&ctx, req).await {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }
@@ -46,7 +48,7 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
         let ctx = context::Context::new();
         ctx.store("trace_id", tid);
 
-        match self.logic.get_user(&ctx, &request) {
+        match self.logic.get_user(&ctx, &request).await {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }
@@ -58,10 +60,12 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
         let ctx = context::Context::new();
         ctx.store("trace_id", tid);
         
-        match self.logic.create_journal(&ctx, logic::dto::CreateJournalRequest{ 
+        let req = logic::dto::CreateJournalRequest{ 
             title: request.title, 
             year: request.year,
-         }) {
+         };
+
+        match self.logic.create_journal(&ctx, req).await {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }
@@ -73,7 +77,7 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
         let ctx = context::Context::new();
         ctx.store("trace_id", tid);
         
-        match self.logic.get_journal(&ctx, &request) {
+        match self.logic.get_journal(&ctx, &request).await {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }
@@ -85,10 +89,12 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
         let ctx = context::Context::new();
         ctx.store("trace_id", tid);
         
-        match self.logic.create_subscription(&ctx, logic::dto::CreateSubscriptionRequest{
+        let req = logic::dto::CreateSubscriptionRequest{
             user_id: request.user_id,
             journal_id: request.journal_id,
-        }) {
+        };
+
+        match self.logic.create_subscription(&ctx, req).await {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }
@@ -100,7 +106,7 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
         let ctx = context::Context::new();
         ctx.store("trace_id", tid);
         
-        match self.logic.list_subscriptions_by_user(&ctx, &request) {
+        match self.logic.list_subscriptions_by_user(&ctx, &request).await {
             Ok(obj) => Ok(Response::new(obj.into())),
             Err(service_error) => Err(service_error.into()),
         }

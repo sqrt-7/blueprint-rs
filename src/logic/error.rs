@@ -20,10 +20,11 @@ pub struct ServiceError {
     wrapped: Option<Box<dyn Error>>, // wrapped error
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 pub enum ServiceErrorCode {
     UnexpectedError,
     InvalidID,
+    DuplicateEmail,
     UserNotFound,
     UserInvalidData,
     JournalNotFound,
@@ -32,7 +33,7 @@ pub enum ServiceErrorCode {
     SubscriptionInvalidData,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 pub enum ServiceErrorType {
     Internal,
     NotFound,
@@ -45,7 +46,7 @@ pub enum ServiceErrorType {
 impl ServiceError {
     pub fn new(code: ServiceErrorCode) -> Self {
         ServiceError {
-            error_type: ServiceErrorType::Internal,
+            error_type: map_code_to_type(code),
             code,
             internal_msg: None,
             wrapped: None,
@@ -62,17 +63,12 @@ impl ServiceError {
         self
     }
 
-    pub fn with_type(mut self, error_type: ServiceErrorType) -> Self {
-        self.error_type = error_type;
-        self
-    }
-
     pub fn error_type(&self) -> ServiceErrorType {
-        self.error_type.clone()
+        self.error_type
     }
 
     pub fn code(&self) -> ServiceErrorCode {
-        self.code.clone()
+        self.code
     }
 
     pub fn internal_msg(&self) -> &Option<String> {
@@ -147,5 +143,19 @@ impl Display for ServiceErrorCode {
 impl From<ServiceErrorCode> for String {
     fn from(value: ServiceErrorCode) -> Self {
         format!("{:?}", value)
+    }
+}
+
+fn map_code_to_type(code: ServiceErrorCode) -> ServiceErrorType {
+    match code {
+        ServiceErrorCode::UnexpectedError => ServiceErrorType::Internal,
+        ServiceErrorCode::InvalidID => ServiceErrorType::InvalidArgument,
+        ServiceErrorCode::DuplicateEmail => ServiceErrorType::AlreadyExists,
+        ServiceErrorCode::UserNotFound => ServiceErrorType::NotFound,
+        ServiceErrorCode::UserInvalidData => ServiceErrorType::InvalidArgument,
+        ServiceErrorCode::JournalNotFound => ServiceErrorType::NotFound,
+        ServiceErrorCode::JournalInvalidData => ServiceErrorType::InvalidArgument,
+        ServiceErrorCode::SubscriptionNotFound => ServiceErrorType::NotFound,
+        ServiceErrorCode::SubscriptionInvalidData => ServiceErrorType::InvalidArgument,
     }
 }

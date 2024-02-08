@@ -4,18 +4,20 @@ use std::{error::Error, fmt::Display};
 pub mod inmem;
 pub mod sql;
 
+pub type DataResult<T> = std::result::Result<T, DatastoreError>;
+
 // INTERFACE --------------
 
+#[tonic::async_trait]
 pub trait Datastore {
-    fn store_user(&self, usr: &domain::User) -> Result<(), DatastoreError>;
-    fn get_user(&self, id: &domain::ID) -> Result<domain::User, DatastoreError>;
-    fn store_journal(&self, j: &domain::Journal) -> Result<(), DatastoreError>;
-    fn get_journal(&self, id: &domain::ID) -> Result<domain::Journal, DatastoreError>;
-    fn store_subscription(&self, sub: &domain::Subscription) -> Result<(), DatastoreError>;
-    fn list_subscriptions_by_user(
-        &self,
-        user_id: &domain::ID,
-    ) -> Result<Vec<domain::Subscription>, DatastoreError>;
+    async fn store_user(&self, usr: &domain::User) -> DataResult<()>;
+    async fn get_user(&self, id: &domain::ID) -> DataResult<domain::User>;
+    async fn store_journal(&self, j: &domain::Journal) -> DataResult<()>;
+    async fn get_journal(&self, id: &domain::ID) -> DataResult<domain::Journal>;
+    async fn store_subscription(&self, sub: &domain::Subscription) -> DataResult<()>;
+    async fn list_subscriptions_by_user(
+        &self, user_id: &domain::ID,
+    ) -> DataResult<Vec<domain::Subscription>>;
 }
 
 // ERRORS -----------------
@@ -30,6 +32,7 @@ pub struct DatastoreError {
 pub enum DatastoreErrorType {
     NotFound,
     DataCorruption,
+    Duplicate,
     Other,
 }
 

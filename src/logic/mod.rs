@@ -2,24 +2,21 @@ pub mod domain;
 pub mod dto;
 pub mod error;
 
-use self::{
-    domain::{Email, JournalTitle, JournalYear, UserName, ID},
-    error::*,
-};
+use self::{domain::ID, error::*};
 use crate::{
-    datastore::{Datastore, DatastoreError, DatastoreErrorType},
+    datastore::{Datastore, DatastoreErrorType},
     toolbox::{context::Context, logger},
 };
-use std::{result, sync::Arc};
+use std::result;
 
 type Result<T> = result::Result<T, ServiceError>;
 
 pub struct Logic {
-    datastore: Arc<dyn Datastore + Send + Sync>,
+    datastore: Box<dyn Datastore + Send + Sync>,
 }
 
 impl Logic {
-    pub fn new(datastore: Arc<dyn Datastore + Send + Sync>) -> Self {
+    pub fn new(datastore: Box<dyn Datastore + Send + Sync>) -> Self {
         Self {
             datastore,
         }
@@ -29,100 +26,96 @@ impl Logic {
     // USE CASES -------------
     // -----------------------
 
-    pub fn create_user(&self, ctx: &Context, data: dto::CreateUserRequest) -> Result<domain::User> {
+    pub async fn create_user(
+        &self, ctx: &Context, data: dto::CreateUserRequest,
+    ) -> Result<domain::User> {
         logger::ctx_info!(ctx, "hellllo");
 
-        let new_id = ID::new();
-        let email = Email::try_from(data.email)?;
-        let name = UserName::try_from(data.name)?;
+        let new_id = ID::new().to_string();
+        let obj = domain::User::try_new(&new_id, &data.email, &data.name)?;
 
-        let obj = domain::User::new(new_id, email, name);
-
-        if let Err(db_err) = self.datastore.store_user(&obj) {
-            return Err(datastore_internal_error(db_err));
-        };
-
-        Ok(obj)
+        match self.datastore.store_user(&obj).await {
+            Ok(_) => Ok(obj),
+            Err(db_err) => match db_err.error_type {
+                DatastoreErrorType::Duplicate => {
+                    Err(ServiceError::new(ServiceErrorCode::DuplicateEmail).wrap(db_err))
+                },
+                _ => Err(ServiceError::new(ServiceErrorCode::UnexpectedError).wrap(db_err)),
+            },
+        }
     }
 
-    pub fn get_user(&self, _: &Context, id: &str) -> Result<domain::User> {
-        let id = ID::try_from(id)?;
-        match self.datastore.get_user(&id) {
+    pub async fn get_user(&self, _: &Context, id: &str) -> Result<domain::User> {
+        let id = parse_id(id)?;
+
+        match self.datastore.get_user(&id).await {
             Ok(obj) => Ok(obj),
             Err(db_err) => match db_err.error_type {
                 DatastoreErrorType::NotFound => {
-                    Err(ServiceError::new(ServiceErrorCode::UserNotFound)
-                        .with_type(ServiceErrorType::NotFound)
-                        .wrap(db_err))
+                    Err(ServiceError::new(ServiceErrorCode::UserNotFound).wrap(db_err))
                 },
-                _ => Err(datastore_internal_error(db_err)),
+                _ => Err(ServiceError::new(ServiceErrorCode::UnexpectedError).wrap(db_err)),
             },
         }
     }
 
-    pub fn create_journal(
-        &self,
-        _: &Context,
-        data: dto::CreateJournalRequest,
+    pub async fn create_journal(
+        &self, _: &Context, data: dto::CreateJournalRequest,
     ) -> Result<domain::Journal> {
-        let new_id = ID::new();
-        let title = JournalTitle::try_from(data.title)?;
-        let year = JournalYear::try_from(data.year)?;
+        let new_id = ID::new().to_string();
+        let obj = domain::Journal::try_new(&new_id, &data.title, data.year)?;
 
-        let obj = domain::Journal::new(new_id, title, year);
-
-        if let Err(db_err) = self.datastore.store_journal(&obj) {
-            return Err(datastore_internal_error(db_err));
+        if let Err(db_err) = self.datastore.store_journal(&obj).await {
+            return Err(ServiceError::new(ServiceErrorCode::UnexpectedError).wrap(db_err));
         };
 
         Ok(obj)
     }
 
-    pub fn get_journal(&self, _: &Context, id: &str) -> Result<domain::Journal> {
-        let id = ID::try_from(id)?;
-        match self.datastore.get_journal(&id) {
+    pub async fn get_journal(&self, _: &Context, id: &str) -> Result<domain::Journal> {
+        let id = parse_id(id)?;
+        match self.datastore.get_journal(&id).await {
             Ok(obj) => Ok(obj),
             Err(db_err) => match db_err.error_type {
-                DatastoreErrorType::NotFound => Err(ServiceError::new(
-                    ServiceErrorCode::JournalNotFound,
-                )
-                .with_type(ServiceErrorType::NotFound)
-                .wrap(db_err)),
-                _ => Err(datastore_internal_error(db_err)),
+                DatastoreErrorType::NotFound => {
+                    Err(ServiceError::new(ServiceErrorCode::JournalNotFound).wrap(db_err))
+                },
+                _ => Err(ServiceError::new(ServiceErrorCode::UnexpectedError).wrap(db_err)),
             },
         }
     }
 
-    pub fn create_subscription(
-        &self,
-        _: &Context,
-        data: dto::CreateSubscriptionRequest,
+    pub async fn create_subscription(
+        &self, _: &Context, data: dto::CreateSubscriptionRequest,
     ) -> Result<domain::Subscription> {
-        let user_id = ID::try_from(data.user_id)?;
-        let journal_id = ID::try_from(data.journal_id)?;
+        let user_id = parse_id(&data.user_id)?;
+        let journal_id = parse_id(&data.journal_id)?;
         let new_id = ID::new();
 
         let sub = domain::Subscription::new(new_id, user_id, journal_id);
 
-        if let Err(db_err) = self.datastore.store_subscription(&sub) {
-            return Err(datastore_internal_error(db_err));
+        if let Err(db_err) = self
+            .datastore
+            .store_subscription(&sub)
+            .await
+        {
+            return Err(ServiceError::new(ServiceErrorCode::UnexpectedError).wrap(db_err));
         };
 
         Ok(sub)
     }
 
-    pub fn list_subscriptions_by_user(
-        &self,
-        _: &Context,
-        user_id: &str,
+    pub async fn list_subscriptions_by_user(
+        &self, _: &Context, user_id: &str,
     ) -> Result<Vec<domain::Subscription>> {
-        let user_id = ID::try_from(user_id)?;
+        let user_id = parse_id(user_id)?;
         match self
             .datastore
             .list_subscriptions_by_user(&user_id)
+            .await
         {
             Ok(res) => Ok(res),
-            Err(db_err) => Err(datastore_internal_error(db_err)),
+            Err(db_err) => Err(ServiceError::new(ServiceErrorCode::UnexpectedError).wrap(db_err)),
         }
     }
 }
@@ -137,8 +130,9 @@ impl core::fmt::Debug for Logic {
 // HELPERS ---------------
 // -----------------------
 
-fn datastore_internal_error(db_err: DatastoreError) -> ServiceError {
-    ServiceError::new(ServiceErrorCode::UnexpectedError)
-        .with_type(ServiceErrorType::Internal)
-        .wrap(db_err)
+fn parse_id(value: &str) -> Result<domain::ID> {
+    match domain::ID::try_from(value) {
+        Ok(id) => Ok(id),
+        Err(e) => Err(ServiceError::new(ServiceErrorCode::InvalidID).with_internal_msg(e)),
+    }
 }

@@ -10,8 +10,7 @@ use tokio::signal::unix::SignalKind;
 use tonic::{transport::Server, Request, Status};
 
 pub fn init(
-    port: u16,
-    logic: Arc<logic::Logic>,
+    port: u16, logic: Arc<logic::Logic>,
 ) -> Result<impl Future<Output = Result<(), tonic::transport::Error>>, Box<dyn Error>> {
     let addr = format!("127.0.0.1:{}", port);
     let addr: SocketAddr = addr.parse()?;

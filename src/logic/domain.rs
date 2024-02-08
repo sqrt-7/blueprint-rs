@@ -1,4 +1,4 @@
-use super::error::{ServiceError, ServiceErrorCode, ServiceErrorType};
+use super::error::ServiceError;
 use crate::proto;
 use std::fmt::Display;
 use uuid::Uuid as uuid_bytes;
@@ -13,20 +13,18 @@ impl ID {
 }
 
 impl TryFrom<&str> for ID {
-    type Error = ServiceError;
+    type Error = String;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match uuid_bytes::parse_str(value) {
             Ok(raw) => Ok(ID(raw.to_string())),
-            Err(_) => Err(ServiceError::new(ServiceErrorCode::InvalidID)
-                .with_type(ServiceErrorType::InvalidArgument)
-                .with_internal_msg(format!("invalid id: {}", value))),
+            Err(_) => Err(format!("invalid id: {value}")),
         }
     }
 }
 
 impl TryFrom<String> for ID {
-    type Error = ServiceError;
+    type Error = String;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         ID::try_from(value.as_str())
@@ -61,6 +59,43 @@ impl User {
         }
     }
 
+    pub fn try_new(id: &str, email: &str, name: &str) -> Result<Self, ServiceError> {
+        let parsed_id = match ID::try_from(id) {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(
+                    ServiceError::new(super::ServiceErrorCode::InvalidID).with_internal_msg(e),
+                )
+            },
+        };
+
+        let parsed_email = match Email::try_from(email.to_string()) {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(
+                    ServiceError::new(super::ServiceErrorCode::UserInvalidData)
+                        .with_internal_msg(e),
+                )
+            },
+        };
+
+        let parsed_name = match UserName::try_from(name.to_string()) {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(
+                    ServiceError::new(super::ServiceErrorCode::UserInvalidData)
+                        .with_internal_msg(e),
+                )
+            },
+        };
+
+        Ok(User {
+            id: parsed_id,
+            email: parsed_email,
+            name: parsed_name,
+        })
+    }
+
     pub fn id(&self) -> &ID {
         &self.id
     }
@@ -75,7 +110,7 @@ impl User {
 }
 
 impl TryFrom<proto::User> for User {
-    type Error = ServiceError;
+    type Error = String;
 
     fn try_from(value: proto::User) -> Result<Self, Self::Error> {
         let id = ID::try_from(value.id)?;
@@ -116,6 +151,43 @@ impl Journal {
         }
     }
 
+    pub fn try_new(id: &str, title: &str, year: u32) -> Result<Self, ServiceError> {
+        let parsed_id = match ID::try_from(id) {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(
+                    ServiceError::new(super::ServiceErrorCode::InvalidID).with_internal_msg(e),
+                )
+            },
+        };
+
+        let parsed_title = match JournalTitle::try_from(title.to_string()) {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(
+                    ServiceError::new(super::ServiceErrorCode::JournalInvalidData)
+                        .with_internal_msg(e),
+                )
+            },
+        };
+
+        let parsed_year = match JournalYear::try_from(year) {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(
+                    ServiceError::new(super::ServiceErrorCode::JournalInvalidData)
+                        .with_internal_msg(e),
+                )
+            },
+        };
+
+        Ok(Journal {
+            id: parsed_id,
+            title: parsed_title,
+            year: parsed_year,
+        })
+    }
+
     pub fn id(&self) -> &ID {
         &self.id
     }
@@ -130,7 +202,7 @@ impl Journal {
 }
 
 impl TryFrom<proto::Journal> for Journal {
-    type Error = ServiceError;
+    type Error = String;
 
     fn try_from(value: proto::Journal) -> Result<Self, Self::Error> {
         let id = ID::try_from(value.id)?;
@@ -220,7 +292,7 @@ pub struct Email(String);
 impl Email {}
 
 impl TryFrom<String> for Email {
-    type Error = ServiceError;
+    type Error = String;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         // todo
@@ -240,7 +312,7 @@ pub struct UserName(String);
 impl UserName {}
 
 impl TryFrom<String> for UserName {
-    type Error = ServiceError;
+    type Error = String;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         // todo
@@ -258,7 +330,7 @@ impl Display for UserName {
 pub struct JournalTitle(String);
 
 impl TryFrom<String> for JournalTitle {
-    type Error = ServiceError;
+    type Error = String;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         // todo
@@ -270,7 +342,7 @@ impl TryFrom<String> for JournalTitle {
 pub struct JournalYear(u32);
 
 impl TryFrom<u32> for JournalYear {
-    type Error = ServiceError;
+    type Error = String;
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         // todo

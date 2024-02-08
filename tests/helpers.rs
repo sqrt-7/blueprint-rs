@@ -23,7 +23,7 @@ pub fn spawn_app() -> TestServer {
 
     let actual_http_port = listener.local_addr().unwrap().port();
 
-    let ds = Arc::new(InMemDatastore::new());
+    let ds = Box::new(InMemDatastore::new());
     let svc = Arc::new(Logic::new(ds));
 
     let http_server = http::init(listener, svc).unwrap_or_else(|err| {

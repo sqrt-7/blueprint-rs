@@ -2,7 +2,6 @@
 
 ## todo
 
-- sql database
 - field validation
 - opencensus
 - background worker
