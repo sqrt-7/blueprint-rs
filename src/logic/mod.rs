@@ -9,7 +9,7 @@ use crate::{
 };
 use std::result;
 
-type Result<T> = result::Result<T, ServiceError>;
+type LogicResult<T> = result::Result<T, ServiceError>;
 
 pub struct Logic {
     datastore: Box<dyn Datastore + Send + Sync>,
@@ -28,7 +28,7 @@ impl Logic {
 
     pub async fn create_user(
         &self, ctx: &Context, data: dto::CreateUserRequest,
-    ) -> Result<domain::User> {
+    ) -> LogicResult<domain::User> {
         logger::ctx_info!(ctx, "hellllo");
 
         let new_id = ID::new().to_string();
@@ -37,7 +37,7 @@ impl Logic {
         match self.datastore.store_user(&obj).await {
             Ok(_) => Ok(obj),
             Err(db_err) => match db_err.error_type {
-                DatastoreErrorType::Duplicate => {
+                DatastoreErrorType::Conflict => {
                     Err(ServiceError::new(ServiceErrorCode::DuplicateEmail).wrap(db_err))
                 },
                 _ => Err(ServiceError::new(ServiceErrorCode::UnexpectedError).wrap(db_err)),
@@ -45,7 +45,7 @@ impl Logic {
         }
     }
 
-    pub async fn get_user(&self, _: &Context, id: &str) -> Result<domain::User> {
+    pub async fn get_user(&self, _: &Context, id: &str) -> LogicResult<domain::User> {
         let id = parse_id(id)?;
 
         match self.datastore.get_user(&id).await {
@@ -61,7 +61,7 @@ impl Logic {
 
     pub async fn create_journal(
         &self, _: &Context, data: dto::CreateJournalRequest,
-    ) -> Result<domain::Journal> {
+    ) -> LogicResult<domain::Journal> {
         let new_id = ID::new().to_string();
         let obj = domain::Journal::try_new(&new_id, &data.title, data.year)?;
 
@@ -72,7 +72,7 @@ impl Logic {
         Ok(obj)
     }
 
-    pub async fn get_journal(&self, _: &Context, id: &str) -> Result<domain::Journal> {
+    pub async fn get_journal(&self, _: &Context, id: &str) -> LogicResult<domain::Journal> {
         let id = parse_id(id)?;
         match self.datastore.get_journal(&id).await {
             Ok(obj) => Ok(obj),
@@ -87,7 +87,7 @@ impl Logic {
 
     pub async fn create_subscription(
         &self, _: &Context, data: dto::CreateSubscriptionRequest,
-    ) -> Result<domain::Subscription> {
+    ) -> LogicResult<domain::Subscription> {
         let user_id = parse_id(&data.user_id)?;
         let journal_id = parse_id(&data.journal_id)?;
         let new_id = ID::new();
@@ -107,7 +107,7 @@ impl Logic {
 
     pub async fn list_subscriptions_by_user(
         &self, _: &Context, user_id: &str,
-    ) -> Result<Vec<domain::Subscription>> {
+    ) -> LogicResult<Vec<domain::Subscription>> {
         let user_id = parse_id(user_id)?;
         match self
             .datastore
@@ -130,7 +130,7 @@ impl core::fmt::Debug for Logic {
 // HELPERS ---------------
 // -----------------------
 
-fn parse_id(value: &str) -> Result<domain::ID> {
+fn parse_id(value: &str) -> LogicResult<domain::ID> {
     match domain::ID::try_from(value) {
         Ok(id) => Ok(id),
         Err(e) => Err(ServiceError::new(ServiceErrorCode::InvalidID).with_internal_msg(e)),

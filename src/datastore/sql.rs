@@ -17,7 +17,7 @@ impl SqlDatastore {
 
         let conn = sqlx::mysql::MySqlPoolOptions::new()
             .max_connections(MAX_CONN)
-            .connect(url.as_str())
+            .connect(&url)
             .await?;
 
         Ok(SqlDatastore {
@@ -39,7 +39,7 @@ impl Datastore for SqlDatastore {
             .bind(usr.name().to_string());
 
         match self.pool.execute(q).await {
-            Err(e) => sql_error("store_user", e),
+            Err(e) => datastore_error("store_user", e),
             Ok(_) => Ok(()),
         }
     }
@@ -51,14 +51,8 @@ impl Datastore for SqlDatastore {
             .await;
 
         match res {
-            Err(e) => sql_error("get_user", e),
-            Ok(row) => match domain::User::try_from(row) {
-                Ok(v) => Ok(v),
-                Err(err) => Err(DatastoreError::new(
-                    err,
-                    DatastoreErrorType::DataCorruption,
-                )),
-            },
+            Err(e) => datastore_error("get_user", e),
+            Ok(row) => convert_from_row(row),
         }
     }
 
@@ -81,11 +75,11 @@ impl Datastore for SqlDatastore {
     }
 }
 
-fn sql_error<T>(func: &str, err: sqlx::Error) -> Result<T, DatastoreError> {
-    let transform = match err {
+fn datastore_error<T>(func: &str, err: sqlx::Error) -> DataResult<T> {
+    let ds_err = match err {
         sqlx::Error::Database(ref boxed_error) => {
             if boxed_error.is_unique_violation() {
-                DatastoreErrorType::Duplicate
+                DatastoreErrorType::Conflict
             } else {
                 DatastoreErrorType::Other
             }
@@ -108,8 +102,15 @@ fn sql_error<T>(func: &str, err: sqlx::Error) -> Result<T, DatastoreError> {
 
     Err(DatastoreError::new(
         format!("SqlDatastore::{func} error:{:?}", err),
-        transform,
+        ds_err,
     ))
+}
+
+fn convert_from_row<T, R>(row: R) -> DataResult<T>
+where
+    T: TryFrom<R, Error = String>,
+{
+    T::try_from(row).map_err(|err| DatastoreError::new(err, DatastoreErrorType::DataCorruption))
 }
 
 #[derive(sqlx::FromRow)]

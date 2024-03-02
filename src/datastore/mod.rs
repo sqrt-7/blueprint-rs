@@ -32,7 +32,7 @@ pub struct DatastoreError {
 pub enum DatastoreErrorType {
     NotFound,
     DataCorruption,
-    Duplicate,
+    Conflict,
     Other,
 }
 
@@ -47,10 +47,11 @@ impl DatastoreError {
 
 impl Display for DatastoreError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
+        write!(
+            f,
             "DatastoreError (msg: {}, error_type: {})",
             self.msg, self.error_type
-        ))
+        )
     }
 }
 

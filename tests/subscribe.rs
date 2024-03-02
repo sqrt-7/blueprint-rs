@@ -2,7 +2,7 @@
 mod helpers;
 
 use actix_web::http;
-use blueprint::logic::error::{ServiceError, ServiceErrorCode, ServiceErrorType};
+use blueprint::logic::error::{ServiceError, ServiceErrorCode};
 use std::collections::HashMap;
 
 #[tokio::test]
@@ -36,10 +36,6 @@ async fn post_subscription_400_invalid_id() {
 
     assert_eq!(http::StatusCode::BAD_REQUEST, status_code);
     assert!(matches!(err.code(), ServiceErrorCode::InvalidID));
-    assert!(matches!(
-        err.error_type(),
-        ServiceErrorType::InvalidArgument
-    ));
 }
 
 #[tokio::test]

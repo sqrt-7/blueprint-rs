@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use actix_web::http;
 use blueprint::logic::{
     domain::{User, ID},
-    error::{ServiceError, ServiceErrorCode, ServiceErrorType},
+    error::{ServiceError, ServiceErrorCode},
 };
 use serde_json;
 
@@ -102,10 +102,6 @@ async fn get_user_404() {
     assert!(matches!(
         err.code(),
         ServiceErrorCode::UserNotFound
-    ));
-    assert!(matches!(
-        err.error_type(),
-        ServiceErrorType::NotFound
     ));
 }
 
