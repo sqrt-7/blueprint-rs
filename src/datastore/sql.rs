@@ -56,21 +56,7 @@ impl Datastore for SqlDatastore {
         }
     }
 
-    async fn store_journal(&self, _j: &domain::Journal) -> DataResult<()> {
-        todo!()
-    }
-
-    async fn get_journal(&self, _id: &domain::ID) -> DataResult<domain::Journal> {
-        todo!()
-    }
-
-    async fn store_subscription(&self, _sub: &domain::Subscription) -> DataResult<()> {
-        todo!()
-    }
-
-    async fn list_subscriptions_by_user(
-        &self, _user_id: &domain::ID,
-    ) -> DataResult<Vec<domain::Subscription>> {
+    async fn list_users(&self) -> DataResult<Vec<domain::User>> {
         todo!()
     }
 }

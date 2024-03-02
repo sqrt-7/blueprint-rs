@@ -7,10 +7,7 @@ import "google/protobuf/wrappers.proto";
 service Blueprint {
     rpc CreateUser(CreateUserRequest) returns (User);
     rpc GetUser(google.protobuf.StringValue) returns (User);
-    rpc CreateJournal(CreateJournalRequest) returns (Journal);
-    rpc GetJournal(google.protobuf.StringValue) returns (Journal);
-    rpc CreateSubscription(CreateSubscriptionRequest) returns (Subscription);
-    rpc ListSubscriptionsForUser(google.protobuf.StringValue) returns (SubscriptionList);
+    rpc ListUsers(Query) returns (UserList);
 }
 
 message User {
@@ -19,20 +16,8 @@ message User {
     string email = 3;
 }
 
-message Journal {
-    string id = 1;
-    string title = 2;
-    uint32 year = 3;
-}
-
-message Subscription {
-    string id = 1;
-    string user_id = 2;
-    string journal_id = 3;
-}
-
-message SubscriptionList {
-    repeated Subscription items = 1;
+message UserList {
+    repeated User items = 1;
 }
 
 message CreateUserRequest {
@@ -40,13 +25,6 @@ message CreateUserRequest {
     string email = 2;
 }
 
-message CreateJournalRequest {
-    string title = 1;
-    uint32 year = 2;
+message Query {
+    string placeholder = 1;
 }
-
-message CreateSubscriptionRequest {
-    string user_id = 1;
-    string journal_id = 2;
-}
-

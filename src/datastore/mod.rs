@@ -12,12 +12,7 @@ pub type DataResult<T> = std::result::Result<T, DatastoreError>;
 pub trait Datastore {
     async fn store_user(&self, usr: &domain::User) -> DataResult<()>;
     async fn get_user(&self, id: &domain::ID) -> DataResult<domain::User>;
-    async fn store_journal(&self, j: &domain::Journal) -> DataResult<()>;
-    async fn get_journal(&self, id: &domain::ID) -> DataResult<domain::Journal>;
-    async fn store_subscription(&self, sub: &domain::Subscription) -> DataResult<()>;
-    async fn list_subscriptions_by_user(
-        &self, user_id: &domain::ID,
-    ) -> DataResult<Vec<domain::Subscription>>;
+    async fn list_users(&self) -> DataResult<Vec<domain::User>>;
 }
 
 // ERRORS -----------------

@@ -1,4 +1,4 @@
-use super::error::ServiceError;
+use super::error::LogicError;
 use crate::proto;
 use std::fmt::Display;
 use uuid::Uuid as uuid_bytes;
@@ -43,7 +43,7 @@ impl Display for ID {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
 pub struct User {
     id: ID,
     email: Email,
@@ -59,13 +59,11 @@ impl User {
         }
     }
 
-    pub fn try_new(id: &str, email: &str, name: &str) -> Result<Self, ServiceError> {
+    pub fn try_new(id: &str, email: &str, name: &str) -> Result<Self, LogicError> {
         let parsed_id = match ID::try_from(id) {
             Ok(v) => v,
             Err(e) => {
-                return Err(
-                    ServiceError::new(super::ServiceErrorCode::InvalidID).with_internal_msg(e),
-                )
+                return Err(LogicError::new(super::LogicErrorCode::InvalidID).with_internal_msg(e))
             },
         };
 
@@ -73,8 +71,7 @@ impl User {
             Ok(v) => v,
             Err(e) => {
                 return Err(
-                    ServiceError::new(super::ServiceErrorCode::UserInvalidData)
-                        .with_internal_msg(e),
+                    LogicError::new(super::LogicErrorCode::UserInvalidData).with_internal_msg(e),
                 )
             },
         };
@@ -83,8 +80,7 @@ impl User {
             Ok(v) => v,
             Err(e) => {
                 return Err(
-                    ServiceError::new(super::ServiceErrorCode::UserInvalidData)
-                        .with_internal_msg(e),
+                    LogicError::new(super::LogicErrorCode::UserInvalidData).with_internal_msg(e),
                 )
             },
         };
@@ -135,158 +131,20 @@ impl From<User> for proto::User {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct Journal {
-    id: ID,
-    title: JournalTitle,
-    year: JournalYear,
-}
+impl From<Vec<User>> for proto::UserList {
+    fn from(val: Vec<User>) -> Self {
+        let converted: Vec<proto::User> = val
+            .into_iter()
+            .map(|element| (element).into())
+            .collect();
 
-impl Journal {
-    pub fn new(id: ID, title: JournalTitle, year: JournalYear) -> Self {
-        Journal {
-            id,
-            title,
-            year,
+        proto::UserList {
+            items: converted,
         }
-    }
-
-    pub fn try_new(id: &str, title: &str, year: u32) -> Result<Self, ServiceError> {
-        let parsed_id = match ID::try_from(id) {
-            Ok(v) => v,
-            Err(e) => {
-                return Err(
-                    ServiceError::new(super::ServiceErrorCode::InvalidID).with_internal_msg(e),
-                )
-            },
-        };
-
-        let parsed_title = match JournalTitle::try_from(title.to_string()) {
-            Ok(v) => v,
-            Err(e) => {
-                return Err(
-                    ServiceError::new(super::ServiceErrorCode::JournalInvalidData)
-                        .with_internal_msg(e),
-                )
-            },
-        };
-
-        let parsed_year = match JournalYear::try_from(year) {
-            Ok(v) => v,
-            Err(e) => {
-                return Err(
-                    ServiceError::new(super::ServiceErrorCode::JournalInvalidData)
-                        .with_internal_msg(e),
-                )
-            },
-        };
-
-        Ok(Journal {
-            id: parsed_id,
-            title: parsed_title,
-            year: parsed_year,
-        })
-    }
-
-    pub fn id(&self) -> &ID {
-        &self.id
-    }
-
-    pub fn title(&self) -> &JournalTitle {
-        &self.title
-    }
-
-    pub fn year(&self) -> &JournalYear {
-        &self.year
-    }
-}
-
-impl TryFrom<proto::Journal> for Journal {
-    type Error = String;
-
-    fn try_from(value: proto::Journal) -> Result<Self, Self::Error> {
-        let id = ID::try_from(value.id)?;
-        let title = JournalTitle::try_from(value.title)?;
-        let year = JournalYear::try_from(value.year)?;
-
-        Ok(Journal {
-            id,
-            title,
-            year,
-        })
-    }
-}
-
-impl From<Journal> for proto::Journal {
-    fn from(val: Journal) -> Self {
-        proto::Journal {
-            id: val.id.0,
-            title: val.title.0,
-            year: val.year.0,
-        }
-    }
-}
-
-impl Display for JournalTitle {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
-pub struct Subscription {
-    id: ID,
-    user_id: ID,
-    journal_id: ID,
-}
-
-impl Subscription {
-    pub fn new(id: ID, user_id: ID, journal_id: ID) -> Self {
-        Subscription {
-            id,
-            user_id,
-            journal_id,
-        }
-    }
-
-    pub fn id(&self) -> &ID {
-        &self.id
-    }
-
-    pub fn user_id(&self) -> &ID {
-        &self.user_id
-    }
-
-    pub fn journal_id(&self) -> &ID {
-        &self.journal_id
-    }
-}
-
-impl From<Subscription> for proto::Subscription {
-    fn from(val: Subscription) -> Self {
-        proto::Subscription {
-            id: val.id.0,
-            user_id: val.user_id.0,
-            journal_id: val.journal_id.0,
-        }
-    }
-}
-
-impl From<Vec<Subscription>> for proto::SubscriptionList {
-    fn from(val: Vec<Subscription>) -> Self {
-        let mut res = proto::SubscriptionList {
-            items: Vec::new(),
-        };
-
-        for v in val.into_iter() {
-            res.items.push(v.into());
-        }
-
-        res
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Email(String);
 
 impl Email {}
@@ -306,7 +164,7 @@ impl Display for Email {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
 pub struct UserName(String);
 
 impl UserName {}
@@ -323,29 +181,5 @@ impl TryFrom<String> for UserName {
 impl Display for UserName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct JournalTitle(String);
-
-impl TryFrom<String> for JournalTitle {
-    type Error = String;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        // todo
-        Ok(JournalTitle(value))
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct JournalYear(u32);
-
-impl TryFrom<u32> for JournalYear {
-    type Error = String;
-
-    fn try_from(value: u32) -> Result<Self, Self::Error> {
-        // todo
-        Ok(JournalYear(value))
     }
 }

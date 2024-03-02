@@ -4,14 +4,6 @@ pub struct CreateUserRequest {
     pub name: String,
 }
 
-#[derive(serde::Deserialize, Debug)]
-pub struct CreateJournalRequest {
-    pub title: String,
-    pub year: u32,
-}
-
-#[derive(serde::Deserialize, Debug)]
-pub struct CreateSubscriptionRequest {
-    pub user_id: String,
-    pub journal_id: String,
+pub struct Query {
+    // todo
 }

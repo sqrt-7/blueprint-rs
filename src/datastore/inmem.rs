@@ -5,27 +5,13 @@ use std::{collections::HashMap, sync::Mutex};
 pub struct InMemDatastore {
     // HashMap<String, String> and Vec<String> are Send+Sync
     // so Mutex is also Send+Sync => no Arc needed
-    users: Mutex<HashMap<String, String>>,    // <id, json>
-    journals: Mutex<HashMap<String, String>>, // <id, json>
-    subs: Mutex<DatastoreSubs>,
-}
-
-struct DatastoreSubs {
-    subs_db: HashMap<String, String>,                 // <id, json>
-    subs_index_user: HashMap<String, Vec<String>>,    // <user_id, id>
-    subs_index_journal: HashMap<String, Vec<String>>, // <journal_id, id>
+    users: Mutex<HashMap<String, String>>, // <id, json>
 }
 
 impl InMemDatastore {
     pub fn new() -> Self {
         InMemDatastore {
             users: Mutex::new(HashMap::new()),
-            journals: Mutex::new(HashMap::new()),
-            subs: Mutex::new(DatastoreSubs {
-                subs_db: HashMap::new(),
-                subs_index_user: HashMap::new(),
-                subs_index_journal: HashMap::new(),
-            }),
         }
     }
 
@@ -89,100 +75,16 @@ impl Datastore for InMemDatastore {
         }
     }
 
-    async fn store_journal(&self, obj: &domain::Journal) -> DataResult<()> {
-        let data = InMemDatastore::to_json(obj)?;
-        let mut db = self.journals.lock().unwrap();
-        db.insert(obj.id().to_string(), data);
-        Ok(())
-    }
+    async fn list_users(&self) -> DataResult<Vec<domain::User>> {
+        let db = self.users.lock().unwrap();
+        let mut items: Vec<domain::User> = Vec::new();
 
-    async fn get_journal(&self, id: &domain::ID) -> DataResult<domain::Journal> {
-        let db = self.journals.lock().unwrap();
-        match db.get(&id.to_string()) {
-            Some(data) => {
-                let item = InMemDatastore::from_json::<domain::Journal>(data)?;
-                Ok(item)
-            },
-
-            None => Err(DatastoreError::new(
-                format!("id: {}", id),
-                DatastoreErrorType::NotFound,
-            )),
-        }
-    }
-
-    async fn store_subscription(&self, sub: &domain::Subscription) -> DataResult<()> {
-        let mut db = self.subs.lock().unwrap();
-        let data = InMemDatastore::to_json(sub)?;
-
-        // Add to db
-        db.subs_db
-            .insert(sub.id().to_string(), data);
-
-        // Add to user index
-        if let Some(v) = db
-            .subs_index_user
-            .get_mut(&sub.user_id().to_string())
-        {
-            let to_add = sub.id().to_string();
-            if !v.contains(&to_add) {
-                v.push(to_add);
-            }
-        } else {
-            db.subs_index_user.insert(
-                sub.user_id().to_string(),
-                Vec::from([sub.id().to_string()]),
-            );
+        for (_, data) in db.iter() {
+            let u = InMemDatastore::from_json::<domain::User>(data)?;
+            items.push(u);
         }
 
-        // Add to journal index
-        if let Some(v) = db
-            .subs_index_journal
-            .get_mut(&sub.journal_id().to_string())
-        {
-            let to_add = sub.id().to_string();
-            if !v.contains(&to_add) {
-                v.push(to_add);
-            }
-        } else {
-            db.subs_index_journal.insert(
-                sub.journal_id().to_string(),
-                Vec::from([sub.id().to_string()]),
-            );
-        }
-
-        Ok(())
-    }
-
-    async fn list_subscriptions_by_user(
-        &self, user_id: &domain::ID,
-    ) -> DataResult<Vec<domain::Subscription>> {
-        let db = self.subs.lock().unwrap();
-
-        let mut found = Vec::new();
-        if let Some(sub_ids) = db
-            .subs_index_user
-            .get(&user_id.to_string())
-        {
-            for sid in sub_ids {
-                let entry = db.subs_db.get(sid);
-                if entry.is_none() {
-                    // This should never happen
-                    return Err(DatastoreError::new(
-                        format!(
-                            "subs_index_user exists for missing item: (user_id: {}, id: {})",
-                            user_id, sid
-                        ),
-                        DatastoreErrorType::DataCorruption,
-                    ));
-                }
-
-                let item = InMemDatastore::from_json::<domain::Subscription>(entry.unwrap())?;
-                found.push(item);
-            }
-        }
-
-        Ok(found)
+        Ok(items)
     }
 }
 
@@ -196,7 +98,7 @@ impl std::fmt::Debug for InMemDatastore {
 mod tests {
     use crate::{
         datastore::{Datastore, DatastoreErrorType},
-        logic::domain::{self, Email, Subscription, User, UserName, ID},
+        logic::domain::{Email, User, UserName, ID},
     };
 
     use super::InMemDatastore;
@@ -249,78 +151,48 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn add_subs_list_subs() {
+    async fn add_users_list_users() {
         let ds = InMemDatastore::new();
 
-        let user1 = ID::new();
-        let user2 = ID::new();
+        let id1 = ID::new();
+        let id2 = ID::new();
+        let id3 = ID::new();
+        let id4 = ID::new();
+        let id5 = ID::new();
 
-        let sub1 = Subscription::new(ID::new(), user1.clone(), ID::new());
-        let sub2 = Subscription::new(ID::new(), user1.clone(), ID::new());
-        let sub3 = Subscription::new(ID::new(), user1.clone(), ID::new());
-        let sub4 = Subscription::new(ID::new(), user2.clone(), ID::new());
-        let sub5 = Subscription::new(ID::new(), user2.clone(), ID::new());
-        let sub6 = Subscription::new(ID::new(), user2.clone(), ID::new());
+        let email1 = Email::try_from("user1@test.com".to_string()).unwrap();
+        let email2 = Email::try_from("user2@test.com".to_string()).unwrap();
+        let email3 = Email::try_from("user3@test.com".to_string()).unwrap();
+        let email4 = Email::try_from("user4@test.com".to_string()).unwrap();
+        let email5 = Email::try_from("user5@test.com".to_string()).unwrap();
 
-        ds.store_subscription(&sub1)
-            .await
-            .unwrap();
-        ds.store_subscription(&sub1)
-            .await
-            .unwrap(); // duplicate
-        ds.store_subscription(&sub1)
-            .await
-            .unwrap(); // duplicate
-        ds.store_subscription(&sub2)
-            .await
-            .unwrap();
-        ds.store_subscription(&sub2)
-            .await
-            .unwrap(); // duplicate
-        ds.store_subscription(&sub3)
-            .await
-            .unwrap();
-        ds.store_subscription(&sub4)
-            .await
-            .unwrap();
-        ds.store_subscription(&sub5)
-            .await
-            .unwrap();
-        ds.store_subscription(&sub6)
-            .await
-            .unwrap();
+        let name1 = UserName::try_from("Person One".to_string()).unwrap();
+        let name2 = UserName::try_from("Person Two".to_string()).unwrap();
+        let name3 = UserName::try_from("Person Three".to_string()).unwrap();
+        let name4 = UserName::try_from("Person Four".to_string()).unwrap();
+        let name5 = UserName::try_from("Person Five".to_string()).unwrap();
+
+        let user1 = User::new(id1, email1, name1);
+        let user2 = User::new(id2, email2, name2);
+        let user3 = User::new(id3, email3, name3);
+        let user4 = User::new(id4, email4, name4);
+        let user5 = User::new(id5, email5, name5);
+
+        ds.store_user(&user1).await.unwrap();
+        ds.store_user(&user2).await.unwrap();
+        ds.store_user(&user3).await.unwrap();
+        ds.store_user(&user4).await.unwrap();
+        ds.store_user(&user5).await.unwrap();
 
         {
-            let res = ds
-                .list_subscriptions_by_user(&user1)
-                .await
-                .unwrap();
+            let res = ds.list_users().await.unwrap();
 
-            assert!(res.len() == 3);
-            assert!(res.contains(&sub1));
-            assert!(res.contains(&sub2));
-            assert!(res.contains(&sub3));
-        }
-
-        {
-            let res = ds
-                .list_subscriptions_by_user(&user2)
-                .await
-                .unwrap();
-
-            assert!(res.len() == 3);
-            assert!(res.contains(&sub4));
-            assert!(res.contains(&sub5));
-            assert!(res.contains(&sub6));
-        }
-
-        {
-            let some_fake_id = domain::ID::new();
-            let res = ds
-                .list_subscriptions_by_user(&some_fake_id)
-                .await
-                .unwrap();
-            assert!(res.len() == 0);
+            assert!(res.len() == 5);
+            assert!(res.contains(&user1));
+            assert!(res.contains(&user2));
+            assert!(res.contains(&user3));
+            assert!(res.contains(&user4));
+            assert!(res.contains(&user5));
         }
     }
 }

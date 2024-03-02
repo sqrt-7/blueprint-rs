@@ -54,60 +54,16 @@ impl blueprint_server::Blueprint for BlueprintServerImpl {
         }
     }
 
-    async fn create_journal(&self, request: Request<proto::CreateJournalRequest>) -> Result<Response<proto::Journal>, Status> {
-        let request = request.into_inner();
+    async fn list_users(&self, _: Request<proto::Query>) -> Result<Response<proto::UserList>, Status> {
+        // let request = request.into_inner();
         let tid = uuid::Uuid::new_v4().to_string(); // todo
         let ctx = context::Context::new();
         ctx.store("trace_id", tid);
         
-        let req = logic::dto::CreateJournalRequest{ 
-            title: request.title, 
-            year: request.year,
-         };
+        let req = logic::dto::Query {};
 
-        match self.logic.create_journal(&ctx, req).await {
-            Ok(obj) => Ok(Response::new(obj.into())),
-            Err(service_error) => Err(service_error.into()),
-        }
-    }
-
-    async fn get_journal(&self, request: Request<String>) -> Result<Response<proto::Journal>, Status> {
-        let request = request.into_inner();
-        let tid = uuid::Uuid::new_v4().to_string(); // todo
-        let ctx = context::Context::new();
-        ctx.store("trace_id", tid);
-        
-        match self.logic.get_journal(&ctx, &request).await {
-            Ok(obj) => Ok(Response::new(obj.into())),
-            Err(service_error) => Err(service_error.into()),
-        }
-    }
-
-    async fn create_subscription(&self, request: Request<proto::CreateSubscriptionRequest>) -> Result<Response<proto::Subscription>, Status> {
-        let request = request.into_inner();
-        let tid = uuid::Uuid::new_v4().to_string(); // todo
-        let ctx = context::Context::new();
-        ctx.store("trace_id", tid);
-        
-        let req = logic::dto::CreateSubscriptionRequest{
-            user_id: request.user_id,
-            journal_id: request.journal_id,
-        };
-
-        match self.logic.create_subscription(&ctx, req).await {
-            Ok(obj) => Ok(Response::new(obj.into())),
-            Err(service_error) => Err(service_error.into()),
-        }
-    }
-
-    async fn list_subscriptions_for_user(&self, request: Request<String>) -> Result<Response<proto::SubscriptionList>, Status> {
-        let request = request.into_inner();
-        let tid = uuid::Uuid::new_v4().to_string(); // todo
-        let ctx = context::Context::new();
-        ctx.store("trace_id", tid);
-        
-        match self.logic.list_subscriptions_by_user(&ctx, &request).await {
-            Ok(obj) => Ok(Response::new(obj.into())),
+        match self.logic.list_users(&ctx, req).await {
+            Ok(results) => Ok(Response::new(results.into())),
             Err(service_error) => Err(service_error.into()),
         }
     }

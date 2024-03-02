@@ -1,7 +1,7 @@
 use crate::{
     logic::{
         dto,
-        error::{ServiceError, ServiceErrorCode},
+        error::{LogicError, LogicErrorCode},
         Logic,
     },
     toolbox::logger,
@@ -12,7 +12,7 @@ use actix_web::{
     HttpRequest, HttpResponse, Resource, Responder, Route, Scope,
 };
 
-pub type HttpResult = std::result::Result<HttpResponse, ServiceError>;
+pub type HttpResult = std::result::Result<HttpResponse, LogicError>;
 
 pub(super) fn endpoints(cfg: &mut ServiceConfig) {
     cfg.service(
@@ -26,31 +26,23 @@ pub(super) fn endpoints(cfg: &mut ServiceConfig) {
     cfg.service(
         Scope::new("/api/v1")
             .service(
-                Resource::new("/users").route(
-                    Route::new()
-                        .method(Method::POST)
-                        .to(post_user),
-                ),
+                Resource::new("/users")
+                    .route(
+                        Route::new()
+                            .method(Method::POST)
+                            .to(post_user),
+                    )
+                    .route(
+                        Route::new()
+                            .method(Method::GET)
+                            .to(list_users),
+                    ),
             )
             .service(
                 Resource::new("/users/{id}").route(
                     Route::new()
                         .method(Method::GET)
                         .to(get_user),
-                ),
-            )
-            .service(
-                Resource::new("/subscriptions").route(
-                    Route::new()
-                        .method(Method::POST)
-                        .to(post_subscription),
-                ),
-            )
-            .service(
-                Resource::new("/subscriptions/user/{user_id}").route(
-                    Route::new()
-                        .method(Method::GET)
-                        .to(list_subscriptions_by_user),
                 ),
             ),
     );
@@ -70,7 +62,7 @@ pub(super) async fn post_user(
     let data = serde_json::from_slice::<dto::CreateUserRequest>(&body);
 
     if let Err(json_err) = data {
-        return Err(ServiceError::new(ServiceErrorCode::UserInvalidData).wrap(json_err));
+        return Err(LogicError::new(LogicErrorCode::UserInvalidData).wrap(json_err));
     }
 
     logger::ctx_info!(ctx, "hello");
@@ -89,32 +81,10 @@ pub(super) async fn get_user(logic: web::Data<Logic>, req: HttpRequest) -> HttpR
     Ok(HttpResponse::Ok().json(result))
 }
 
-pub(super) async fn list_subscriptions_by_user(
-    logic: web::Data<Logic>, req: HttpRequest,
-) -> HttpResult {
+pub(super) async fn list_users(logic: web::Data<Logic>, req: HttpRequest) -> HttpResult {
     let ctx = super::ctx_from_req(&req);
-    let user_id = req.match_info().get("user_id").unwrap();
-    let result = logic
-        .list_subscriptions_by_user(&ctx, user_id)
-        .await?;
+    let query = dto::Query {};
+    let result = logic.list_users(&ctx, query).await?;
 
     Ok(HttpResponse::Ok().json(result))
-}
-
-pub(super) async fn post_subscription(
-    logic: web::Data<Logic>, req: HttpRequest, body: web::Bytes,
-) -> HttpResult {
-    let ctx = super::ctx_from_req(&req);
-    let data = serde_json::from_slice::<dto::CreateSubscriptionRequest>(&body);
-
-    if let Err(json_err) = data {
-        return Err(ServiceError::new(ServiceErrorCode::SubscriptionInvalidData).wrap(json_err));
-    }
-
-    let data = data.unwrap();
-    let result = logic
-        .create_subscription(&ctx, data)
-        .await?;
-
-    Ok(HttpResponse::Created().json(result))
 }

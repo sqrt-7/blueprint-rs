@@ -9,7 +9,7 @@ use crate::{
 };
 use std::result;
 
-type LogicResult<T> = result::Result<T, ServiceError>;
+type LogicResult<T> = result::Result<T, LogicError>;
 
 pub struct Logic {
     datastore: Box<dyn Datastore + Send + Sync>,
@@ -38,9 +38,9 @@ impl Logic {
             Ok(_) => Ok(obj),
             Err(db_err) => match db_err.error_type {
                 DatastoreErrorType::Conflict => {
-                    Err(ServiceError::new(ServiceErrorCode::DuplicateEmail).wrap(db_err))
+                    Err(LogicError::new(LogicErrorCode::DuplicateEmail).wrap(db_err))
                 },
-                _ => Err(ServiceError::new(ServiceErrorCode::UnexpectedError).wrap(db_err)),
+                _ => Err(LogicError::new(LogicErrorCode::UnexpectedError).wrap(db_err)),
             },
         }
     }
@@ -52,70 +52,17 @@ impl Logic {
             Ok(obj) => Ok(obj),
             Err(db_err) => match db_err.error_type {
                 DatastoreErrorType::NotFound => {
-                    Err(ServiceError::new(ServiceErrorCode::UserNotFound).wrap(db_err))
+                    Err(LogicError::new(LogicErrorCode::UserNotFound).wrap(db_err))
                 },
-                _ => Err(ServiceError::new(ServiceErrorCode::UnexpectedError).wrap(db_err)),
+                _ => Err(LogicError::new(LogicErrorCode::UnexpectedError).wrap(db_err)),
             },
         }
     }
 
-    pub async fn create_journal(
-        &self, _: &Context, data: dto::CreateJournalRequest,
-    ) -> LogicResult<domain::Journal> {
-        let new_id = ID::new().to_string();
-        let obj = domain::Journal::try_new(&new_id, &data.title, data.year)?;
-
-        if let Err(db_err) = self.datastore.store_journal(&obj).await {
-            return Err(ServiceError::new(ServiceErrorCode::UnexpectedError).wrap(db_err));
-        };
-
-        Ok(obj)
-    }
-
-    pub async fn get_journal(&self, _: &Context, id: &str) -> LogicResult<domain::Journal> {
-        let id = parse_id(id)?;
-        match self.datastore.get_journal(&id).await {
-            Ok(obj) => Ok(obj),
-            Err(db_err) => match db_err.error_type {
-                DatastoreErrorType::NotFound => {
-                    Err(ServiceError::new(ServiceErrorCode::JournalNotFound).wrap(db_err))
-                },
-                _ => Err(ServiceError::new(ServiceErrorCode::UnexpectedError).wrap(db_err)),
-            },
-        }
-    }
-
-    pub async fn create_subscription(
-        &self, _: &Context, data: dto::CreateSubscriptionRequest,
-    ) -> LogicResult<domain::Subscription> {
-        let user_id = parse_id(&data.user_id)?;
-        let journal_id = parse_id(&data.journal_id)?;
-        let new_id = ID::new();
-
-        let sub = domain::Subscription::new(new_id, user_id, journal_id);
-
-        if let Err(db_err) = self
-            .datastore
-            .store_subscription(&sub)
-            .await
-        {
-            return Err(ServiceError::new(ServiceErrorCode::UnexpectedError).wrap(db_err));
-        };
-
-        Ok(sub)
-    }
-
-    pub async fn list_subscriptions_by_user(
-        &self, _: &Context, user_id: &str,
-    ) -> LogicResult<Vec<domain::Subscription>> {
-        let user_id = parse_id(user_id)?;
-        match self
-            .datastore
-            .list_subscriptions_by_user(&user_id)
-            .await
-        {
+    pub async fn list_users(&self, _: &Context, _: dto::Query) -> LogicResult<Vec<domain::User>> {
+        match self.datastore.list_users().await {
             Ok(res) => Ok(res),
-            Err(db_err) => Err(ServiceError::new(ServiceErrorCode::UnexpectedError).wrap(db_err)),
+            Err(db_err) => Err(LogicError::new(LogicErrorCode::UnexpectedError).wrap(db_err)),
         }
     }
 }
@@ -133,6 +80,6 @@ impl core::fmt::Debug for Logic {
 fn parse_id(value: &str) -> LogicResult<domain::ID> {
     match domain::ID::try_from(value) {
         Ok(id) => Ok(id),
-        Err(e) => Err(ServiceError::new(ServiceErrorCode::InvalidID).with_internal_msg(e)),
+        Err(e) => Err(LogicError::new(LogicErrorCode::InvalidID).with_internal_msg(e)),
     }
 }

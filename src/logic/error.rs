@@ -9,8 +9,8 @@ use std::{
 use tonic::{Code, Status};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct ServiceError {
-    code: ServiceErrorCode,
+pub struct LogicError {
+    code: LogicErrorCode,
 
     #[serde(skip)]
     internal_msg: Option<String>,
@@ -20,7 +20,7 @@ pub struct ServiceError {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
-pub enum ServiceErrorCode {
+pub enum LogicErrorCode {
     UnexpectedError,
     InvalidID,
     DuplicateEmail,
@@ -32,9 +32,9 @@ pub enum ServiceErrorCode {
     SubscriptionInvalidData,
 }
 
-impl ServiceError {
-    pub fn new(code: ServiceErrorCode) -> Self {
-        ServiceError {
+impl LogicError {
+    pub fn new(code: LogicErrorCode) -> Self {
+        LogicError {
             code,
             internal_msg: None,
             wrapped: None,
@@ -51,24 +51,24 @@ impl ServiceError {
         self
     }
 
-    pub fn code(&self) -> ServiceErrorCode {
+    pub fn code(&self) -> LogicErrorCode {
         self.code
     }
 }
 
 // (HTTP) Convert ServiceError to actix_web response
-impl ResponseError for ServiceError {
+impl ResponseError for LogicError {
     fn status_code(&self) -> http::StatusCode {
         match self.code {
-            ServiceErrorCode::UnexpectedError => http::StatusCode::INTERNAL_SERVER_ERROR,
-            ServiceErrorCode::InvalidID => http::StatusCode::BAD_REQUEST,
-            ServiceErrorCode::DuplicateEmail => http::StatusCode::CONFLICT,
-            ServiceErrorCode::UserNotFound => http::StatusCode::NOT_FOUND,
-            ServiceErrorCode::UserInvalidData => http::StatusCode::BAD_REQUEST,
-            ServiceErrorCode::JournalNotFound => http::StatusCode::NOT_FOUND,
-            ServiceErrorCode::JournalInvalidData => http::StatusCode::BAD_REQUEST,
-            ServiceErrorCode::SubscriptionNotFound => http::StatusCode::NOT_FOUND,
-            ServiceErrorCode::SubscriptionInvalidData => http::StatusCode::BAD_REQUEST,
+            LogicErrorCode::UnexpectedError => http::StatusCode::INTERNAL_SERVER_ERROR,
+            LogicErrorCode::InvalidID => http::StatusCode::BAD_REQUEST,
+            LogicErrorCode::DuplicateEmail => http::StatusCode::CONFLICT,
+            LogicErrorCode::UserNotFound => http::StatusCode::NOT_FOUND,
+            LogicErrorCode::UserInvalidData => http::StatusCode::BAD_REQUEST,
+            LogicErrorCode::JournalNotFound => http::StatusCode::NOT_FOUND,
+            LogicErrorCode::JournalInvalidData => http::StatusCode::BAD_REQUEST,
+            LogicErrorCode::SubscriptionNotFound => http::StatusCode::NOT_FOUND,
+            LogicErrorCode::SubscriptionInvalidData => http::StatusCode::BAD_REQUEST,
         }
     }
 
@@ -80,44 +80,44 @@ impl ResponseError for ServiceError {
 }
 
 // (GRPC) Convert ServiceError to tonic::Status
-impl From<ServiceError> for Status {
-    fn from(val: ServiceError) -> Self {
+impl From<LogicError> for Status {
+    fn from(val: LogicError) -> Self {
         let grpc_code = match val.code {
-            ServiceErrorCode::UnexpectedError => Code::Internal,
-            ServiceErrorCode::InvalidID => Code::InvalidArgument,
-            ServiceErrorCode::DuplicateEmail => Code::AlreadyExists,
-            ServiceErrorCode::UserNotFound => Code::NotFound,
-            ServiceErrorCode::UserInvalidData => Code::InvalidArgument,
-            ServiceErrorCode::JournalNotFound => Code::NotFound,
-            ServiceErrorCode::JournalInvalidData => Code::InvalidArgument,
-            ServiceErrorCode::SubscriptionNotFound => Code::NotFound,
-            ServiceErrorCode::SubscriptionInvalidData => Code::InvalidArgument,
+            LogicErrorCode::UnexpectedError => Code::Internal,
+            LogicErrorCode::InvalidID => Code::InvalidArgument,
+            LogicErrorCode::DuplicateEmail => Code::AlreadyExists,
+            LogicErrorCode::UserNotFound => Code::NotFound,
+            LogicErrorCode::UserInvalidData => Code::InvalidArgument,
+            LogicErrorCode::JournalNotFound => Code::NotFound,
+            LogicErrorCode::JournalInvalidData => Code::InvalidArgument,
+            LogicErrorCode::SubscriptionNotFound => Code::NotFound,
+            LogicErrorCode::SubscriptionInvalidData => Code::InvalidArgument,
         };
 
         Status::new(grpc_code, val.code)
     }
 }
 
-impl Display for ServiceError {
+impl Display for LogicError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ServiceError{{ code: {} }}", self.code)
+        write!(f, "LogicError{{ code: {} }}", self.code)
     }
 }
 
-impl Error for ServiceError {
+impl Error for LogicError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         self.wrapped.as_deref()
     }
 }
 
-impl Display for ServiceErrorCode {
+impl Display for LogicErrorCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
-impl From<ServiceErrorCode> for String {
-    fn from(value: ServiceErrorCode) -> Self {
+impl From<LogicErrorCode> for String {
+    fn from(value: LogicErrorCode) -> Self {
         format!("{:?}", value)
     }
 }
