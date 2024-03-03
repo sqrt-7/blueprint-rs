@@ -4,6 +4,6 @@ datastore:
   db_type: "mysql"
   config:
     addr: "localhost"
-    port: 32771
+    port: 32768
     user: "foo"
     password: "local12345"

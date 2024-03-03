@@ -9,7 +9,7 @@ use actix_web::{
     dev::{ServiceRequest, ServiceResponse},
     web, HttpMessage,
 };
-use actix_web_lab::middleware;
+use actix_web_lab::middleware::{self, CatchPanic};
 use std::{error::Error, net::TcpListener, sync::Arc};
 
 pub fn create_listener(port: u16) -> Result<TcpListener, Box<dyn Error>> {
@@ -26,9 +26,12 @@ pub fn init(
 
     let app_init = move || {
         let logic = web::Data::from(Arc::clone(&logic));
+
         actix_web::App::new()
             // Attach logic controller
             .app_data(logic)
+            // Turn panic into 500
+            .wrap(CatchPanic::default())
             // Custom request/response logging middleware
             .wrap(middleware::from_fn(custom_logger_mw))
             // Inject Context into request
@@ -65,7 +68,7 @@ async fn custom_logger_mw(
     // LOG REQUEST
     logger::ctx_info!(
         &ctx,
-        "[HTTP] method: {} | url: {}",
+        "http.{}({})",
         req.method().to_string(),
         req.uri().to_string(),
     );
@@ -75,20 +78,18 @@ async fn custom_logger_mw(
 
     // LOG RESPONSE
     if let Err(ref e) = resp_wrap {
-        logger::ctx_error!(&ctx, "handler failed: {:?}", e);
+        logger::ctx_error!(&ctx, "handler crashed: {:?}", e);
         return resp_wrap;
     }
 
     let resp = resp_wrap.as_ref().unwrap();
 
     if let Some(err) = resp.response().error() {
-        //if let Some(svc_err) = err.as_error::<logic::error::ServiceError>() {
         if resp.status().is_client_error() {
             logger::ctx_warning!(&ctx, "{:?}", err);
         } else {
             logger::ctx_error!(&ctx, "{:?}", err);
         }
-        //}
     };
 
     resp_wrap

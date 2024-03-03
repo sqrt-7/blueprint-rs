@@ -39,11 +39,7 @@ pub mod context {
                 })
         }
 
-        pub fn modify<T, F>(&self, key: &str, func: F) -> bool
-        where
-            T: 'static,
-            F: Fn(&mut T),
-        {
+        pub fn modify<T: 'static>(&self, key: &str, func: impl Fn(&mut T)) -> bool {
             let mut binding = self.store.lock().unwrap();
 
             match binding
@@ -197,7 +193,9 @@ pub mod logger {
 
         level: Level,
         trace_id: String,
+        #[serde(skip_serializing_if = "String::is_empty")]
         path: String,
+        #[serde(skip_serializing_if = "String::is_empty")]
         line: String,
         msg: String,
     }

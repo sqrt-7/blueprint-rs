@@ -1,6 +1,6 @@
 @base_url = http://127.0.0.1:8000/api/v1
 
-@user_id1 = 8a75734d-1847-4a5a-8c10-a2dd32589438
+@user_id1 = 094c6c65-fa4c-4324-bb7e-c0dda9595e54
 
 ### Healthz
 GET {{base_url}}/healthz
@@ -10,10 +10,12 @@ POST {{base_url}}/users
 Content-Type: application/json
 
 {
-    "email": "test2@test.com",
-    "name": "Jeff Jeffries"
+    "email": "test3@test.com",
+    "name": "Jeff Three"
 }
 
 ### Get User
 GET {{base_url}}/users/{{user_id1}}
 
+### List Users
+GET {{base_url}}/users
