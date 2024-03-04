@@ -55,9 +55,6 @@ pub(super) async fn healthz() -> impl Responder {
 pub(super) async fn post_user(
     logic: web::Data<Logic>, req: HttpRequest, body: web::Bytes,
 ) -> HttpResult {
-    println!("id: {:?}", std::thread::current().id());
-    println!("name: {:?}", std::thread::current().name());
-
     let ctx = super::ctx_from_req(&req);
     let data = serde_json::from_slice::<dto::CreateUserRequest>(&body);
 

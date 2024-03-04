@@ -143,12 +143,14 @@ pub mod logger {
                 level,
                 path: String::new(),
                 line: String::new(),
+                thread: String::new(),
                 msg,
             }
         }
 
         pub fn log_entry_filled(
             &self, level: Level, msg: String, trace_id: String, path: String, line: String,
+            thread: String,
         ) -> LogEntry {
             LogEntry {
                 format: self.format,
@@ -157,6 +159,7 @@ pub mod logger {
                 path,
                 line,
                 msg,
+                thread,
             }
         }
     }
@@ -190,32 +193,19 @@ pub mod logger {
     pub struct LogEntry {
         #[serde(skip)]
         format: LogFormat,
-
         level: Level,
+        #[serde(skip_serializing_if = "String::is_empty")]
         trace_id: String,
         #[serde(skip_serializing_if = "String::is_empty")]
         path: String,
         #[serde(skip_serializing_if = "String::is_empty")]
         line: String,
+        #[serde(skip_serializing_if = "String::is_empty")]
+        thread: String,
         msg: String,
     }
 
     impl LogEntry {
-        pub fn with_trace_id(mut self, trace_id: &str) -> LogEntry {
-            self.trace_id = trace_id.to_string();
-            self
-        }
-
-        pub fn with_path(mut self, path: String) -> LogEntry {
-            self.path = path;
-            self
-        }
-
-        pub fn with_file_line(mut self, file_line: String) -> LogEntry {
-            self.line = file_line;
-            self
-        }
-
         pub fn publish(self) {
             match self.format {
                 LogFormat::Json => {
@@ -247,13 +237,19 @@ pub mod logger {
                 Some(v) => v.clone(),
                 None => String::new(),
             };
+            let thread_name: String = match std::thread::current().name() {
+                Some(v) => v.to_string(),
+                None => String::new(),
+            };
+
             crate::toolbox::logger::logger()
                 .log_entry_filled(
                     $lvl,
                     format!($($arg)+),
                     tid,
                     module_path!().to_string(),
-                    format!("{}:{}", file!(), line!()))
+                    format!("{}:{}", file!(), line!()),
+                    thread_name)
                 .publish();
         });
     }
@@ -284,19 +280,5 @@ pub mod logger {
     pub(crate) use ctx_error;
 
     #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        #[test]
-        fn log_with_context() {
-            let logger = Logger::new(LogFormat::Json);
-            let trace_id = String::from("12345");
-            logger
-                .log_entry(Level::Warn, "this is a message".to_string())
-                .with_trace_id(&trace_id)
-                .with_path(module_path!().to_string())
-                .with_file_line(format!("{}:{}", file!(), line!()))
-                .publish();
-        }
-    }
+    mod tests {}
 }

@@ -10,8 +10,8 @@ POST {{base_url}}/users
 Content-Type: application/json
 
 {
-    "email": "test3@test.com",
-    "name": "Jeff Three"
+    "email": "test4@test.com",
+    "name": "Jeff Four"
 }
 
 ### Get User

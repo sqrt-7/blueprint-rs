@@ -51,9 +51,6 @@ impl Default for InMemDatastore {
 #[tonic::async_trait]
 impl Datastore for InMemDatastore {
     async fn store_user(&self, obj: &domain::User) -> DataResult<()> {
-        println!("id: {:?}", std::thread::current().id());
-        println!("name: {:?}", std::thread::current().name());
-
         let data = InMemDatastore::to_json(obj)?;
         let mut db = self.users.lock().unwrap();
         db.insert(obj.id().to_string(), data);

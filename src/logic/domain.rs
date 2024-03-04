@@ -1,6 +1,7 @@
 use super::error::LogicError;
 use crate::proto;
-use std::fmt::Display;
+use email_address::EmailAddress;
+use std::{fmt::Display, str::FromStr};
 use uuid::Uuid as uuid_bytes;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
@@ -135,7 +136,7 @@ impl From<Vec<User>> for proto::UserList {
     fn from(val: Vec<User>) -> Self {
         let converted: Vec<proto::User> = val
             .into_iter()
-            .map(|element| (element).into())
+            .map(|element| element.into())
             .collect();
 
         proto::UserList {
@@ -149,18 +150,29 @@ pub struct Email(String);
 
 impl Email {}
 
+impl TryFrom<&str> for Email {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let value = value.trim();
+        if let Err(e) = EmailAddress::from_str(value) {
+            return Err(format!("invalid email: {e}"));
+        }
+        Ok(Email(value.to_string()))
+    }
+}
+
 impl TryFrom<String> for Email {
     type Error = String;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        // todo
-        Ok(Email(value))
+        Email::try_from(value.as_str())
     }
 }
 
 impl Display for Email {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        f.write_str(self.0.as_str())
     }
 }
 
@@ -180,6 +192,36 @@ impl TryFrom<String> for UserName {
 
 impl Display for UserName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        f.write_str(self.0.as_str())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Email;
+
+    #[test]
+    fn email_valid() {
+        let v = "test@foo.com";
+        let res = Email::try_from(v);
+        assert!(res.is_ok());
+        assert_eq!(v, res.unwrap().0);
+    }
+
+    #[test]
+    fn email_invalid() {
+        let v = "not_an_email.com";
+        let res = Email::try_from(v);
+        assert!(res.is_err());
+        assert!(res
+            .unwrap_err()
+            .contains("invalid email: Missing separator character"));
+    }
+
+    #[test]
+    fn email_valid_trim() {
+        let res = Email::try_from("           test@foo.com                     ");
+        assert!(res.is_ok());
+        assert_eq!("test@foo.com", res.unwrap().0);
     }
 }

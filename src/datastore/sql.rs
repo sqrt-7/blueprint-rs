@@ -57,7 +57,21 @@ impl Datastore for SqlDatastore {
     }
 
     async fn list_users(&self) -> DataResult<Vec<domain::User>> {
-        todo!()
+        let res = sqlx::query_as::<_, UserRow>("SELECT * FROM `users`")
+            .fetch_all(&self.pool)
+            .await;
+
+        match res {
+            Err(e) => datastore_error("list_users", e),
+            Ok(rows) => {
+                let mut results: Vec<domain::User> = Vec::new();
+                for row in rows.into_iter() {
+                    let u = convert_from_row(row)?;
+                    results.push(u)
+                }
+                Ok(results)
+            },
+        }
     }
 }
 

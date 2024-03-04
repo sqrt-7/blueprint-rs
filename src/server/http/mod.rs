@@ -21,9 +21,6 @@ pub fn create_listener(port: u16) -> Result<TcpListener, Box<dyn Error>> {
 pub fn init(
     listener: TcpListener, logic: Arc<logic::Logic>,
 ) -> Result<actix_web::dev::Server, Box<dyn Error>> {
-    println!("id: {:?}", std::thread::current().id());
-    println!("name: {:?}", std::thread::current().name());
-
     let app_init = move || {
         let logic = web::Data::from(Arc::clone(&logic));
 

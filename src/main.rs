@@ -19,9 +19,6 @@ fn main() {
 }
 
 fn run(config: Config) {
-    println!("id: {:?}", std::thread::current().id());
-    println!("name: {:?}", std::thread::current().name());
-
     // RUNTIME
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
