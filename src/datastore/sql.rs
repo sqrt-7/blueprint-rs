@@ -38,72 +38,63 @@ impl Datastore for SqlDatastore {
             .bind(usr.email().to_string())
             .bind(usr.name().to_string());
 
-        match self.pool.execute(q).await {
-            Err(e) => datastore_error("store_user", e),
-            Ok(_) => Ok(()),
-        }
+        self.pool.execute(q).await?;
+
+        Ok(())
     }
 
     async fn get_user(&self, id: &domain::ID) -> DataResult<domain::User> {
-        let res = sqlx::query_as::<_, UserRow>("SELECT * FROM `users` WHERE `id` = ?")
+        let row = sqlx::query_as::<_, UserRow>("SELECT * FROM `users` WHERE `id` = ?")
             .bind(id.to_string())
             .fetch_one(&self.pool)
-            .await;
+            .await?;
 
-        match res {
-            Err(e) => datastore_error("get_user", e),
-            Ok(row) => convert_from_row(row),
-        }
+        convert_from_row(row)
     }
 
     async fn list_users(&self) -> DataResult<Vec<domain::User>> {
-        let res = sqlx::query_as::<_, UserRow>("SELECT * FROM `users`")
+        let rows = sqlx::query_as::<_, UserRow>("SELECT * FROM `users`")
             .fetch_all(&self.pool)
-            .await;
+            .await?;
 
-        match res {
-            Err(e) => datastore_error("list_users", e),
-            Ok(rows) => {
-                let mut results: Vec<domain::User> = Vec::new();
-                for row in rows.into_iter() {
-                    let u = convert_from_row(row)?;
-                    results.push(u)
-                }
-                Ok(results)
-            },
+        let mut results: Vec<domain::User> = Vec::new();
+        for row in rows.into_iter() {
+            let u = convert_from_row(row)?;
+            results.push(u);
         }
+
+        Ok(results)
     }
 }
 
-fn datastore_error<T>(func: &str, err: sqlx::Error) -> DataResult<T> {
-    let ds_err = match err {
-        sqlx::Error::Database(ref boxed_error) => {
-            if boxed_error.is_unique_violation() {
-                DatastoreErrorType::Conflict
-            } else {
-                DatastoreErrorType::Other
+impl From<sqlx::Error> for DatastoreError {
+    fn from(err: sqlx::Error) -> Self {
+        let ds_err = match err {
+            sqlx::Error::Database(ref boxed_error) => {
+                if boxed_error.is_unique_violation() {
+                    DatastoreErrorType::Conflict
+                } else {
+                    DatastoreErrorType::Other
+                }
+            },
+
+            sqlx::Error::RowNotFound => DatastoreErrorType::NotFound,
+
+            sqlx::Error::Protocol(_)
+            | sqlx::Error::TypeNotFound {
+                ..
             }
-        },
+            | sqlx::Error::ColumnNotFound(_)
+            | sqlx::Error::ColumnDecode {
+                ..
+            }
+            | sqlx::Error::Decode(_) => DatastoreErrorType::DataCorruption,
 
-        sqlx::Error::RowNotFound => DatastoreErrorType::NotFound,
+            _ => DatastoreErrorType::Other,
+        };
 
-        sqlx::Error::Protocol(_)
-        | sqlx::Error::TypeNotFound {
-            ..
-        }
-        | sqlx::Error::ColumnNotFound(_)
-        | sqlx::Error::ColumnDecode {
-            ..
-        }
-        | sqlx::Error::Decode(_) => DatastoreErrorType::DataCorruption,
-
-        _ => DatastoreErrorType::Other,
-    };
-
-    Err(DatastoreError::new(
-        format!("SqlDatastore::{func} error:{:?}", err),
-        ds_err,
-    ))
+        DatastoreError::new(format!("SqlDatastore[error:{:?}]", err), ds_err)
+    }
 }
 
 fn convert_from_row<T, R>(row: R) -> DataResult<T>

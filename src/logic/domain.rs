@@ -1,4 +1,4 @@
-use super::error::LogicError;
+use super::{error::LogicError, LogicErrorCode};
 use crate::proto;
 use email_address::EmailAddress;
 use std::{fmt::Display, str::FromStr};
@@ -63,26 +63,20 @@ impl User {
     pub fn try_new(id: &str, email: &str, name: &str) -> Result<Self, LogicError> {
         let parsed_id = match ID::try_from(id) {
             Ok(v) => v,
-            Err(e) => {
-                return Err(LogicError::new(super::LogicErrorCode::InvalidID).with_internal_msg(e))
-            },
+            Err(e) => return Err(LogicError::new(LogicErrorCode::InvalidID).with_internal_msg(e)),
         };
 
         let parsed_email = match Email::try_from(email.to_string()) {
             Ok(v) => v,
             Err(e) => {
-                return Err(
-                    LogicError::new(super::LogicErrorCode::UserInvalidData).with_internal_msg(e),
-                )
+                return Err(LogicError::new(LogicErrorCode::UserInvalidData).with_internal_msg(e))
             },
         };
 
         let parsed_name = match UserName::try_from(name.to_string()) {
             Ok(v) => v,
             Err(e) => {
-                return Err(
-                    LogicError::new(super::LogicErrorCode::UserInvalidData).with_internal_msg(e),
-                )
+                return Err(LogicError::new(LogicErrorCode::UserInvalidData).with_internal_msg(e))
             },
         };
 
@@ -210,8 +204,7 @@ mod tests {
 
     #[test]
     fn email_invalid() {
-        let v = "not_an_email.com";
-        let res = Email::try_from(v);
+        let res = Email::try_from("not_an_email.com");
         assert!(res.is_err());
         assert!(res
             .unwrap_err()
