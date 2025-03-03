@@ -55,7 +55,7 @@ fn run(config: Config) {
         .log_entry(logger::Level::Info, "cleaning up...".to_string())
         .publish();
 
-    runtime.shutdown_timeout(Duration::from_secs(5));
+    runtime.shutdown_timeout(Duration::from_secs(30));
 }
 
 fn init_db(config: ConfigDbType, runtime: &Runtime) -> Box<dyn Datastore + Send + Sync> {

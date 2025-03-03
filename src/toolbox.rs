@@ -42,10 +42,11 @@ pub mod context {
         pub fn modify<T: 'static>(&self, key: &str, func: impl Fn(&mut T)) -> bool {
             let mut binding = self.store.lock().unwrap();
 
-            match binding
+            let item = binding
                 .get_mut(&key.to_string())
-                .and_then(|boxed_mut| boxed_mut.downcast_mut::<T>())
-            {
+                .and_then(|boxed_mut| boxed_mut.downcast_mut::<T>());
+
+            match item {
                 Some(val) => {
                     func(val);
                     true

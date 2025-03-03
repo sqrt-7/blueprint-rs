@@ -29,7 +29,7 @@ impl Logic {
     pub async fn create_user(
         &self, ctx: &Context, data: dto::CreateUserRequest,
     ) -> LogicResult<domain::User> {
-        logger::ctx_info!(ctx, "hellllo");
+        logger::ctx_info!(ctx, "hello");
 
         let new_id = ID::new().to_string();
         let obj = domain::User::try_new(&new_id, &data.email, &data.name)?;

@@ -26,10 +26,6 @@ pub enum LogicErrorCode {
     DuplicateEmail,
     UserNotFound,
     UserInvalidData,
-    JournalNotFound,
-    JournalInvalidData,
-    SubscriptionNotFound,
-    SubscriptionInvalidData,
 }
 
 impl LogicError {
@@ -65,10 +61,6 @@ impl ResponseError for LogicError {
             LogicErrorCode::DuplicateEmail => http::StatusCode::CONFLICT,
             LogicErrorCode::UserNotFound => http::StatusCode::NOT_FOUND,
             LogicErrorCode::UserInvalidData => http::StatusCode::BAD_REQUEST,
-            LogicErrorCode::JournalNotFound => http::StatusCode::NOT_FOUND,
-            LogicErrorCode::JournalInvalidData => http::StatusCode::BAD_REQUEST,
-            LogicErrorCode::SubscriptionNotFound => http::StatusCode::NOT_FOUND,
-            LogicErrorCode::SubscriptionInvalidData => http::StatusCode::BAD_REQUEST,
         }
     }
 
@@ -88,10 +80,6 @@ impl From<LogicError> for Status {
             LogicErrorCode::DuplicateEmail => Code::AlreadyExists,
             LogicErrorCode::UserNotFound => Code::NotFound,
             LogicErrorCode::UserInvalidData => Code::InvalidArgument,
-            LogicErrorCode::JournalNotFound => Code::NotFound,
-            LogicErrorCode::JournalInvalidData => Code::InvalidArgument,
-            LogicErrorCode::SubscriptionNotFound => Code::NotFound,
-            LogicErrorCode::SubscriptionInvalidData => Code::InvalidArgument,
         };
 
         Status::new(grpc_code, val.code)

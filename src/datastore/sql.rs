@@ -44,7 +44,7 @@ impl Datastore for SqlDatastore {
     }
 
     async fn get_user(&self, id: &domain::ID) -> DataResult<domain::User> {
-        let row = sqlx::query_as::<_, UserRow>("SELECT * FROM `users` WHERE `id` = ?")
+        let row = sqlx::query_as::<_, UserRow>("SELECT * FROM `users` WHERE `id` = ? LIMIT 1")
             .bind(id.to_string())
             .fetch_one(&self.pool)
             .await?;
@@ -57,7 +57,7 @@ impl Datastore for SqlDatastore {
             .fetch_all(&self.pool)
             .await?;
 
-        let mut results: Vec<domain::User> = Vec::new();
+        let mut results: Vec<domain::User> = Vec::with_capacity(rows.len());
         for row in rows.into_iter() {
             let u = convert_from_row(row)?;
             results.push(u);

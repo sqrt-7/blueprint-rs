@@ -74,12 +74,18 @@ impl Datastore for InMemDatastore {
 
     async fn list_users(&self) -> DataResult<Vec<domain::User>> {
         let db = self.users.lock().unwrap();
-        let mut items: Vec<domain::User> = Vec::new();
+
+        // This would normally come from the query limit
+        let limit = db.len();
+
+        let mut items: Vec<domain::User> = Vec::with_capacity(limit);
 
         for (_, data) in db.iter() {
             let u = InMemDatastore::from_json::<domain::User>(data)?;
             items.push(u);
         }
+
+        items.shrink_to_fit();
 
         Ok(items)
     }

@@ -1,6 +1,5 @@
 use super::{error::LogicError, LogicErrorCode};
 use crate::proto;
-use email_address::EmailAddress;
 use std::{fmt::Display, str::FromStr};
 use uuid::Uuid as uuid_bytes;
 
@@ -149,7 +148,7 @@ impl TryFrom<&str> for Email {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let value = value.trim();
-        if let Err(e) = EmailAddress::from_str(value) {
+        if let Err(e) = email_address::EmailAddress::from_str(value) {
             return Err(format!("invalid email: {e}"));
         }
         Ok(Email(value.to_string()))
