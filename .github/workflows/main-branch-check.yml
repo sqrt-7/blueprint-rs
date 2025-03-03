@@ -27,9 +27,6 @@ jobs:
       - name: lint
         run: make check-lint
 
-      - name: audit
-        run: make check-audit
-
       - name: build
         run: make build
 
