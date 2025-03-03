@@ -1,9 +1,12 @@
-name: Security audit
+name: security-audit
 on:
   push:
     paths:
       - "**/Cargo.toml"
       - "**/Cargo.lock"
+  pull_request:
+    branches: ["main"]
+
 jobs:
   security_audit:
     runs-on: ubuntu-latest
