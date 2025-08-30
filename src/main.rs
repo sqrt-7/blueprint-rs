@@ -41,13 +41,20 @@ fn run(config: Config) {
     let grpc_server = grpc::init(config.grpc_port, logic)
         .unwrap_or_else(|err| panic!("failed to init grpc server: {}", err));
 
-    runtime.block_on(async {
-        if let Err(e) = tokio::try_join!(
-            runtime.spawn(http_server),
-            runtime.spawn(grpc_server)
-        ) {
-            println!("main thread error: {}", e);
+    let http_task = runtime.spawn(async {
+        if let Err(e) = http_server.await {
+            eprintln!("http server error: {}", e);
         }
+    });
+
+    let grpc_task = runtime.spawn(async {
+        if let Err(e) = grpc_server.await {
+            eprintln!("grpc server error: {}", e);
+        }
+    });
+
+    runtime.block_on(async {
+        let _ = tokio::try_join!(http_task, grpc_task);
     });
 
     // Cleanup

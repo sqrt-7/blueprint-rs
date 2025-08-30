@@ -29,13 +29,15 @@ pub mod context {
         }
 
         pub fn pop<T: 'static>(&self, key: &str) -> Option<T> {
-            self.store
-                .lock()
-                .unwrap()
-                .remove(&key.to_string())
+            let mut map = self.store.lock().unwrap();
+
+            map.remove(&key.to_string())
                 .and_then(|removed| match removed.downcast::<T>() {
-                    Ok(dc) => Some(*dc),
-                    Err(_) => None,
+                    Ok(downcast) => Some(*downcast),
+                    Err(original) => {
+                        map.insert(key.to_string(), original);
+                        None
+                    },
                 })
         }
 
